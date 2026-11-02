@@ -268,7 +268,7 @@ onMounted(() => {
 			{{ formatMessage(messages.noInstances) }}
 		</p>
 
-		<div v-else class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+		<div v-else class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
 			<article
 				v-for="card in cards"
 				:key="card.record.server_instance_id"

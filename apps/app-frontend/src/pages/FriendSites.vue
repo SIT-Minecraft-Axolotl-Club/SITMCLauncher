@@ -298,7 +298,7 @@ onMounted(() => {
 					</div>
 				</header>
 
-				<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+				<div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
 					<article
 						v-for="instance in site.instances"
 						:key="instance.id"
