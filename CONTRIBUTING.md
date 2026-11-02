@@ -1,6 +1,6 @@
 # 贡献指南 (Contributing)
 
-感谢你对 Axolotl Launcher 及其相关内容感兴趣！在提交代码前，请先阅读以下指南。
+感谢你对 SITMC 启动器及其相关内容感兴趣！在提交代码前，请先阅读以下指南。
 
 我们希望所有参与者都能在友善、包容的环境中协作。请先阅读[行为准则 (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md)，了解社区期望和问题报告方式。
 
@@ -58,7 +58,7 @@ Remove-Item -Recurse -Force target\debug
 
 ### 应用数据目录与数据库迁移
 
-启动器把设置、数据库、日志与缓存放在同一个数据目录下，Windows 上是 `%APPDATA%\red.ghs.axolotl`，其中按更新通道分为 `release\app.db` 与 `beta\app.db`。
+启动器把设置、数据库、日志与缓存放在同一个数据目录下，Windows 上是 `%APPDATA%\club.sitmc.launcher`，其中按更新通道分为 `release\app.db` 与 `beta\app.db`。
 
 **本地构建与已安装的正式版共用这份数据目录。** 本地跑一次桌面应用，改动的就是正在使用的那份数据库，因此：
 
@@ -69,7 +69,7 @@ Remove-Item -Recurse -Force target\debug
 隔离数据目录有两种方式，推荐在开发时始终使用其中一种：
 
 ```powershell
-# 构建期：该构建写入 red.ghs.axolotl-<后缀>，与正式版互不影响
+# 构建期：该构建写入 club.sitmc.launcher-<后缀>，与正式版互不影响
 $env:AXOLOTL_DATA_DIR_SUFFIX = "pr538"
 pnpm app:build
 
@@ -111,36 +111,30 @@ node scripts/axolotl/downgrade-app-db.mjs --suffix pr538 --to 20260903120000 --a
 
 ## 仓库范围
 
-Axolotl 的产品改动主要位于：
+本项目的产品改动主要位于：
 
 - `apps/app-frontend`
 - `apps/app`
 - `packages/app-lib`
 - 上述包所需的共享 UI 与资源包
 
-本仓库**不包含** Modrinth 网站、Labrinth API 或其运营服务源码。桌面端保留对 Modrinth 公共 API 的客户端兼容；如果需要参考上游实现，请仅手动挑选与 Axolotl 产品相关的改动，避免直接合并无关代码。
+本仓库**不包含** Modrinth 网站、Labrinth API 或其运营服务源码。桌面端保留对 Modrinth 公共 API 的客户端兼容；如果需要参考上游实现，请仅手动挑选与本项目功能相关的改动，避免直接合并无关代码。
 
 ## 发布新版本
 
-发布流程由 [`.github/workflows/axolotl-release.yml`](.github/workflows/axolotl-release.yml) 自动完成。版本号以 Git 标签为准，必须符合[语义化版本格式](https://semver.org/lang/zh-CN/)。
-
-打标签并推送到远端即可触发发布工作流：
+版本号以 Git 标签为准，必须符合[语义化版本格式](https://semver.org/lang/zh-CN/)：
 
 ```powershell
-git tag -a v1.2.3 -m "Axolotl Launcher 1.2.3"
+git tag -a v1.2.3 -m "SITMC Launcher 1.2.3"
 git push origin v1.2.3
 ```
 
 预发布版本请使用带后缀的标签（如 `v1.2.3-beta.1`）。
 
-**自动发布工作流执行步骤**：
-1. 将标签版本写入桌面应用构建配置。
-2. 在 GitHub 托管的 Windows、macOS 和 Linux runner 上并行构建安装包。
-3. 使用仓库 Secrets 中的 Tauri 私钥生成签名更新包。
-4. 生成并校验包含全部桌面平台的 `latest.json`。
-5. 校验成功后将草稿 Release 转为正式发布。
-6. GitHub Release 发布完成后，将安装包、更新清单和 Release 信息镜像到 CNB。
+社团使用**自己的更新服务与签名密钥**发布，安装包在本地构建并签名后再上传，完整步骤（写更新说明、构建、上传后台、自测）见 [`docs/launcher-update-guide.md`](docs/launcher-update-guide.md)。打包前请确认：
 
-源码分支和标签也由 GitHub Actions 在 push 和删除事件后直接同步到 CNB。CNB 仓库不运行定时同步或标签流水线，避免在 GitHub 构建尚未完成时占用 CNB 构建时长。
+1. 版本号已同步到 `apps/app-frontend/package.json` 与两个 `Cargo.toml`（可用 `node scripts/axolotl/set-version.mjs v<版本>`）；
+2. `apps/app-frontend/src/announcements/catalog.ts` 里有对应版本的公告条目；
+3. 构建产出了 `*.exe.sig`——**没有签名更新包，已安装的客户端不会收到这次更新**。
 
-> 注意：自动更新公钥已固化在客户端中，私钥只保存在 GitHub Actions Secrets 中，切勿提交到仓库。
+> 自动更新的公钥已固化在客户端里，签名私钥只保存在发版者本机与社团的密码管理器中，**任何时候都不要提交到仓库**。密钥的生成与轮换方式见更新指南。

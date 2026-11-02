@@ -59,9 +59,8 @@ pnpm --filter @modrinth/app exec tauri signer generate -w "$env:USERPROFILE\.tau
 
 - **私钥**:`%USERPROFILE%\.tauri\sitmc-updater.key`,**绝不能进仓库**,请离线备份(丢了就无法再给已安装的客户端推送更新,只能让玩家重新下载安装包)。
 - **公钥**:`...key.pub` 的**文件内容**(那一整行 `dW50cnVzdGVk…`)就是 `apps/app/tauri-release.conf.json` → `plugins.updater.pubkey` 的值,换密钥时同步替换。
-- 当前仓库内置的是社团密钥 `minisign public key: ABED6FC749650B4F`(2026-09-18 生成),对应的私钥与密码:
-  - 私钥 `%USERPROFILE%\.tauri\sitmc-updater.key`
-  - 密码 `%USERPROFILE%\.tauri\sitmc-updater.key.password`(**请抄进你们的密码管理器/CI 密钥后再删掉这个明文文件**)
+- 仓库当前内置的是社团的更新公钥(指纹见 `apps/app/tauri-release.conf.json` 的 `pubkey`)。发版者需要自备对应的私钥与密码,存放位置由社团自己保管,不要写进仓库或文档:
+  - 私钥文件 + 密码(由社团管理员离线保管,建议放进密码管理器;本机只保留解密所需的一份,用完即删)
 - 想换成你们自己的密码:重新生成一对密钥 → 把新的 `.pub` 内容替换进配置 → 重新构建即可(发布第一个正式版之前换是免费的,发布之后就换不动老客户端了)。
 
 ### 3. 构建安装包(带签名)
@@ -70,8 +69,8 @@ pnpm --filter @modrinth/app exec tauri signer generate -w "$env:USERPROFILE\.tau
 
 ```powershell
 # 签名:私钥内容 + 密码都要给(当前 CLI 不认 TAURI_SIGNING_PRIVATE_KEY_PATH)
-$env:TAURI_SIGNING_PRIVATE_KEY          = Get-Content "$env:USERPROFILE\.tauri\sitmc-updater.key" -Raw
-$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = Get-Content "$env:USERPROFILE\.tauri\sitmc-updater.key.password" -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY          = Get-Content "<私钥文件路径>" -Raw
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "<私钥密码>"
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"   # cargo 不在 PATH 时
 $env:CARGO_BUILD_JOBS = '2'                            # 内存紧张时限制并行编译
 
@@ -94,11 +93,11 @@ $env:VITE_SITMC_UPDATE_URL         = ''
 
 | 文件 | 用途 |
 | --- | --- |
-| `Axolotl Launcher_<版本>_x64-setup.exe` | 给新玩家直接下载安装;**同时就是自更新制品**(后台「制品地址」填它的直链) |
-| `Axolotl Launcher_<版本>_x64-setup.exe.sig` | 制品签名:把**整个文件内容**(那一长串 base64)贴进后台「签名」字段 |
+| `SITMC Launcher_<版本>_x64-setup.exe` | 给新玩家直接下载安装;**同时就是自更新制品**(后台「制品地址」填它的直链) |
+| `SITMC Launcher_<版本>_x64-setup.exe.sig` | 制品签名:把**整个文件内容**(那一长串 base64)贴进后台「签名」字段 |
 
 > 更新器也接受「包含安装程序的 zip」,但本次构建产出的是安装包本体 + `.sig`,按上表填即可。
-> 文件名里的空格不影响使用;要放进 CDN 建议改成 `Axolotl_Launcher_<版本>_x64-setup.exe` 这种不带空格的写法(记得 URL 编码或直接改文件名)。
+> 文件名里的空格不影响使用;要放进 CDN 建议改成 `SITMC_Launcher_<版本>_x64-setup.exe` 这种不带空格的写法(记得 URL 编码或直接改文件名)。
 
 ### 4. 发布到社团更新服务
 
@@ -163,7 +162,7 @@ curl.exe -i "https://skin.sitmc.club/api/launcher/update/windows/x86_64/1.0.0" `
 
 发布顺序固定为**先站点、后启动器**:
 
-1. 把 `SITUserCenter/plugins/sitmc-launcher` 下的改动上传到站点(至少 `bootstrap.php` 与 `src/Http/Controllers/SkinController.php`);
+1. 把站点侧 `sitmc-launcher` 插件的改动上传到站点(至少入口文件与皮肤接口的控制器);
 2. 在站点根目录清路由/配置缓存,否则新路由不生效:
 
    ```bash

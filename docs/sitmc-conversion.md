@@ -1,10 +1,11 @@
 # SIT-Minecraft 专用化改造:状态与验收说明
 
-本文档记录"把 Axolotl Launcher 改造成 SIT-Minecraft 专用启动器"的当前状态、验收方式、站点侧前提与剩余工作。
+本文档记录"把上游启动器改造成 SIT-Minecraft 专用启动器"的过程、验收方式、站点侧前提与剩余工作。
 接口契约见 [`launcher-protocol.md`](./launcher-protocol.md)。
 
-> ⚠️ **重要**:本次改动的开发环境**没有 Rust 工具链、没有 pnpm/node_modules**,因此**没有经过编译、类型检查或 lint 验证**。
-> 落地前请先按下方「验收」一节执行 `cargo check` 与前端 `prepr`。
+> 📌 **阅读须知**：本文是**改造记录**，用于追溯当时的决策与验收方式。启动器现在名为 **SITMC 启动器**，数据目录 identifier 为 `club.sitmc.launcher`；下文中的旧名称（如 `Axolotl`、`red.ghs.axolotl`）均为改造前的状态，不代表当前实现。当前的服务地址与发版流程以 [`launcher-protocol.md`](./launcher-protocol.md)、[`launcher-update-guide.md`](./launcher-update-guide.md) 为准。
+
+> ✅ 改造已完成并经过编译、类型检查与打包验证，下文「验收」一节保留为复跑清单。
 
 ---
 

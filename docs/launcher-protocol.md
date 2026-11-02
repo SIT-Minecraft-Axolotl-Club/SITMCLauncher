@@ -1,11 +1,11 @@
-# Axolotl Launcher 接口规范（SIT-Minecraft 专用版）
+# SITMC 启动器接口规范
 
 | 项目 | 内容 |
 | --- | --- |
-| 产品名 | Axolotl Launcher（上海应用技术大学 SIT-Minecraft 社团专用发行版） |
+| 产品名 | SITMC 启动器（上海应用技术大学 SIT-Minecraft 社团发行版） |
 | 文档性质 | 接口规范（服务端契约），由社团后端开发者实现 |
 | 文档范围 | 账户认证契约、实例清单契约、客户端行为保证、版本兼容、附录 |
-| 客户端实现 | 基于 Axolotl Launcher fork（Rust / Tauri + Vue 3），复用现有 Modrinth 整合包安装管线 |
+| 客户端实现 | 上游启动器的 fork（Rust / Tauri + Vue 3），复用现有 Modrinth 整合包安装管线 |
 | 状态 | 草案。标注「现有」的部分可在当前代码中找到对应实现；标注「规划」的部分尚未实现 |
 
 > 本文档只定义契约，不包含后端实现步骤，也不包含后端代码。文档中出现的所有 JSON、HTTP 头、URL 均为英文/ASCII，说明文字为简体中文。
@@ -43,7 +43,7 @@ SIT-Minecraft 专用版启动器的运行流程被收敛为四个阶段：
 | A | 账户认证 | 社团皮肤站 `https://skin.sitmc.club`（Blessing Skin Server + 插件 "Yggdrasil Connect for Blessing Skin by LittleSkin"） | **否**。启动器复用站点已有的 Yggdrasil / Yggdrasil Connect（OIDC 设备授权授予）接口，不实现账号体系 | 站点侧已实测提供规范所需的端点与作用域，仍需站点管理员确认的事项见 [2.4](#24-站点侧必须确认开启的事项检查清单) |
 | B | 实例清单 | 社团自建后端（下称「清单服务」） | **是**。本规范第 [3](#3-实例清单契约) 章即为其接口定义 | 启动器**依赖此契约**；清单不可用时启动器保留上一次成功清单 |
 
-启动器自身的更新（可执行文件级别）**不属于**上述两个契约，它沿用 Axolotl 既有的自更新服务 `https://update.axlmc.org/latest`，详见 [6.1](#61-与启动器现有机制的对应关系)。
+启动器自身的更新（可执行文件级别）**不属于**上述两个契约，它使用社团自己的更新服务（端点与流程见 [`launcher-update-guide.md`](launcher-update-guide.md)），详见 [6.1](#61-与启动器现有机制的对应关系)。
 
 ### 1.3 术语表
 
@@ -55,7 +55,7 @@ SIT-Minecraft 专用版启动器的运行流程被收敛为四个阶段：
 | 整合包来源 | `pack.kind` / `pack.url` / `pack.sha1` | 受管实例内容的来源。当前客户端已实现 `mrpack`（Modrinth 整合包，按 `modrinth.index.json` 安装）。`zip`（整包覆盖）为**规划中/未实现** |
 | 强制更新 | `launcher.force_update`、`launcher.min_version`、`instances[].required` | 两类强制：**启动器自身强制更新**（低于 `min_version` 时阻断一切操作，不可跳过、不可推迟）与**实例强制更新**（`required` 为真时玩家不可延迟） |
 | 安装阶段 | `install_stage`（客户端本地状态） | 客户端实例的安装状态枚举：`not_installed` / `minecraft_installing` / `pack_installing` / `pack_installed` / `installed`。只有 `installed` 的实例才允许启动 |
-| 客户端 | launcher | 运行在玩家机器上的 Axolotl Launcher 发行版 |
+| 客户端 | launcher | 运行在玩家机器上的 SITMC 启动器 |
 | 清单服务 | manifest service | 社团自建后端中负责下发实例清单的部分 |
 
 ---
@@ -537,7 +537,7 @@ Accept: application/json
 - 版本比较必须按语义化版本规则进行，**不得**做字符串比较（`"1.10.0"` 必须大于 `"1.9.0"`）。
 - 该策略的判定结果与实例清单内容无关：即使 `instances` 为空，`launcher` 的强制更新依然生效。
 
-> 启动器自更新走 `https://update.axlmc.org/latest`（现有机制，见 [6.1](#61-与启动器现有机制的对应关系)）。本对象只负责**下发策略**，不负责下发安装包。
+> 启动器自更新走社团更新服务 `https://skin.sitmc.club/api/launcher/update`（现有机制，见 [6.1](#61-与启动器现有机制的对应关系)）。本对象只负责**下发策略**，不负责下发安装包。
 
 ### 3.5 `instances` 元素
 
@@ -654,7 +654,7 @@ Accept: application/json
 1. **保留上一次成功清单**：客户端会持久化最后一次成功解析的清单，并在请求失败时继续沿用，UI 上给出提示。因此**短暂 5xx 不会让玩家失去实例**。
 2. **不覆盖缓存**：错误响应体**永远不得**被当作清单解析，客户端只按 `error` / `message` 处理。服务端不要用 `200` 携带错误对象，也不要返回结构不完整的清单。
 3. **连续失败计数**：客户端记录连续失败次数，超过 N 次（N 由客户端实现决定，建议为 3）后停止静默重试，向玩家展示明确的网络错误提示与「重试」入口。
-4. **启动器自身强制更新不受影响**：强制更新策略与安装包来自 `launcher` 对象与 `https://update.axlmc.org/latest`，清单服务不可用期间**启动器仍能完成自身更新**。这是刻意的降级设计：后端故障不应导致玩家无法修复客户端。
+4. **启动器自身强制更新不受影响**：强制更新策略与安装包来自 `launcher` 对象与社团更新服务 `https://skin.sitmc.club/api/launcher/update`，清单服务不可用期间**启动器仍能完成自身更新**。这是刻意的降级设计：后端故障不应导致玩家无法修复客户端。
 
 ### 3.9 友社推荐实例（可选）
 
@@ -780,13 +780,13 @@ Accept: application/json
 
 | 本规范中的概念 | 启动器现有机制 | 位置 | 说明 |
 | --- | --- | --- | --- |
-| 启动器自身更新策略 `launcher.*` | 自更新服务 `https://update.axlmc.org/latest` | `apps/app/src/updater_impl.rs` | 现有清单中已含 `force_update` 布尔字段（缺省视为 `false`），并含 `version`、`body`、`published_at`。本规范的 `launcher` 对象是该策略在实例清单中的镜像：`force_update` 语义一致，`min_version` 是本规范**新增**的硬门槛 |
+| 启动器自身更新策略 `launcher.*` | 社团更新服务 `https://skin.sitmc.club/api/launcher/update` | `apps/app/src/updater_impl.rs` | 现有清单中已含 `force_update` 布尔字段（缺省视为 `false`），并含 `version`、`body`、`published_at`。本规范的 `launcher` 对象是该策略在实例清单中的镜像：`force_update` 语义一致，`min_version` 是本规范**新增**的硬门槛 |
 | 灰度请求头（`X-Launcher-*`） | 现有请求头 `X-Axolotl-Channel`、`X-Axolotl-Platform`、`X-Axolotl-Version` | `apps/app/src/updater_impl.rs` | 现有三个头的取值语义（通道 `release`/`beta`、平台标识串、当前版本）与本规范一致，仅前缀不同。沿用取值可以保证客户端两侧逻辑一致 |
-| 客户端身份 | `launcher_user_agent()` → `garbage-human-studio/axolotl/{version} ({os})` | `packages/app-lib/src/brand.rs` | 清单服务可在日志中把该 User-Agent 作为客户端标识；它不含联系方式，不要依赖它做鉴权 |
-| 产品与品牌 | `PRODUCT_NAME = "Axolotl Launcher"`、`BUNDLE_IDENTIFIER = "red.ghs.axolotl"`、`DEEP_LINK_SCHEME = "axolotl"` | `packages/app-lib/src/brand.rs` | 若社团发行版需要改名/改 bundle id，由构建期配置决定；接口契约不受影响 |
+| 客户端身份 | `brand::user_agent()` → `sitmc-launcher/{version} ({os})` | `packages/app-lib/src/brand.rs` | 清单服务可在日志中把该 User-Agent 作为客户端标识；它不含联系方式，不要依赖它做鉴权 |
+| 产品与品牌 | `PRODUCT_NAME = "SITMC Launcher"`、`BUNDLE_IDENTIFIER = "club.sitmc.launcher"`、`DEEP_LINK_SCHEME = "axolotl"` | `packages/app-lib/src/brand.rs` | 若社团发行版需要改名/改 bundle id，由构建期配置决定；接口契约不受影响 |
 | 账户认证（Yggdrasil Connect 设备授权授予与角色来源） | 设备代码流轮询 + 用户信息端点取角色 + OIDC 刷新 | `packages/app-lib/src/state/minecraft_auth/oidc.rs`（`begin_device_login` / `poll_device_login` / `refresh_credentials_with_oidc`）、`packages/app-lib/src/state/minecraft_auth/yggdrasil.rs`（`openid_configuration_url`、`refresh_yggdrasil_credentials` 的 OIDC 分支）、`packages/app-lib/src/sitmc.rs`（`OIDC_SCOPE` / `OIDC_CLIENT_ID` / `SITE_LABEL`） | **现有实现**：[第 2 章](#2-账户认证契约)的 OIDC 路径已经落地——先用 `openid_configuration_url()` 从 `GET {api_root}` 的 `meta.feature.openid_configuration_url` 取得 OP 元数据，校验 `scopes_supported` 是否含规范要求的三项，再走 RFC 8628 设备代码流；轮询成功后角色来自 `userinfo_endpoint` 的 `selectedProfile`。**访问令牌本身就是 Minecraft 访问令牌，没有换取步骤**；续期走 `refresh_credentials_with_oidc`（`grant_type=refresh_token`）。**启动器不解析、不校验 ID 令牌**，仅在 `selectedProfile` 缺失时解码其 JWT 负载作兜底。`yggdrasil.rs` 中的 `fetch_profiles_with_oauth_token` / `authenticate_with_oauth_token` 是旧实现遗留的死代码，已不再被调用 |
 | 密码兜底登录 | 传统 Yggdrasil `POST {api_root}/authserver/authenticate` | `packages/app-lib/src/state/minecraft_auth/yggdrasil.rs`、`apps/app-frontend/src/components/ui/login/SitmcLoginGate.vue` | 站点未启用 Yggdrasil Connect 或玩家主动选择时使用。密码只写入系统凭据管理器（`set_yggdrasil_password` / `get_yggdrasil_password`），不落库。登录界面由 `SitmcLoginGate.vue` 提供：浏览器授权（设备代码流）为主、账号密码兜底，**角色在站点授权页选择**，启动器不再自行列出角色供玩家挑选 |
-| 公告接口 | `https://admin.axlmc.org/api/public/announcements` | `apps/app-frontend/src/components/ui/RemoteAnnouncements.vue` | 现有实现以 `?version=<版本>&channel=stable\|beta` 查询（内部通道 `release` 映射为 `stable`），响应形如 `{ "announcements": [...] }`，客户端限 10 秒超时、响应体超 4.5 MB 丢弃、失败静默重试。**公告与实例清单是两条独立链路**：公告走现有 `admin.axlmc.org`，实例清单走社团新后端 |
+| 公告接口 | `https://skin.sitmc.club/api/launcher/announcements` | `apps/app-frontend/src/components/ui/RemoteAnnouncements.vue` | 现有实现以 `?version=<版本>&channel=stable\|beta` 查询（内部通道 `release` 映射为 `stable`），响应形如 `{ "announcements": [...] }`，客户端限 10 秒超时、响应体超 4.5 MB 丢弃、失败静默重试。**公告与实例清单是两条独立链路**：公告走现有 `admin.axlmc.org`，实例清单走社团新后端 |
 | 受管实例安装 | 整合包安装管线 `CreatePackLocation`（`FromVersionId` / `FromFile`）与 `mrpack` 安装实现 | `packages/app-lib/src/api/pack/install_from.rs`、`packages/app-lib/src/api/pack/install_mrpack.rs` | 受管实例**复用现有整合包安装管线**：`pack.url` 下载后的本地文件走 `FromFile` 路径安装，因此 `pack.kind = "mrpack"` 能直接落地。`zip` 对应的「整包覆盖」管线尚未实现 |
 | 实例安装状态 | `InstanceInstallStage`：`not_installed` / `minecraft_installing` / `pack_installing` / `pack_installed` / `installed` | `packages/app-lib/src/state/instance_types.rs` | [第 4 章](#4-客户端行为规范)中的 `install_stage == installed` 即此枚举 |
 | 实例链接类型 | `InstanceLink` 枚举（含 `Unmanaged`、`ModrinthModpack`、`ImportedModpack` 等） | `packages/app-lib/src/state/instances/model/link.rs` | 受管实例的链接类型属于**规划**：当前枚举中没有「社团受管实例」这一变体，需要后续新增（该新增不影响本契约的字段设计） |
@@ -799,8 +799,8 @@ Accept: application/json
 | --- | --- | --- | --- |
 | `https://content.sitmc.club`（示例，以实际后端域名为准） | **新增**：实例清单 `GET /v1/launcher/manifest` 与整合包/图标下载 | 否，**必须新增** | 至少需要清单域名；若包与图标在其他域名（如 CDN），那些域名同样需要加入 |
 | `https://skin.sitmc.club` | 账户认证（Janus 与 Yggdrasil） | 否，**必须新增** | OIDC 设备流与 Yggdrasil 调用都由此发起 |
-| `https://admin.axlmc.org` | 现有：远程公告 | 是 | 已存在，无需改动 |
-| `https://update.axlmc.org` | 现有：启动器自更新 | 是（通过 Tauri updater 与 capability 配置） | 自更新下载不走前端 `connect-src`；其域名已在 `apps/app/capabilities/plugins.json` 的 http 插件作用域中登记 |
+| `https://skin.sitmc.club` | 现有：远程公告 | 是 | 已存在，无需改动 |
+| `https://skin.sitmc.club`（`/api/launcher/update`） | 现有：启动器自更新 | 是（通过 Tauri updater 与 capability 配置） | 自更新下载不走前端 `connect-src`；其域名已在 `apps/app/capabilities/plugins.json` 的 http 插件作用域中登记 |
 
 补充提醒（参考，非本契约强制要求）：
 
@@ -829,7 +829,7 @@ VITE_SITMC_UPDATE_URL= \
 pnpm app:build
 ```
 
-- 客户端**绝不会回退到 Axolotl 上游的服务器**：默认值只有社团自己的域名。指向后端失败时也不会阻断登录与启动。
+- 客户端**绝不会回退到上游的服务器**：默认值只有社团自己的域名。指向后端失败时也不会阻断登录与启动。
 - 把变量置为空串（而非留空不设）可以关闭对应功能；未设置则使用上面的社团默认地址。
 - 之所以不做成设置项：客户端一旦可被随意指向其他服务端，"实例由社团下发"就不再成立。变更后端地址请重新发版（改 `config.ts` 里的默认值）。
 - 客户端不直接 fetch 清单（请求由 Rust 侧发出，见 `packages/app-lib/src/api/managed.rs`），因此**清单域名不需要加入前端 CSP**；但整合包与图标的下载域名必须在 CSP 的 `connect-src`（下载）与 `img-src`（图标）中可达。
