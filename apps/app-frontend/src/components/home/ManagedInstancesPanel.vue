@@ -4,6 +4,7 @@ import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } fro
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { useManagedInstances } from '@/composables/useManagedInstances'
+import { useServerStatuses } from '@/composables/useServerStatuses'
 import { SitmcConfig } from '@/config'
 import { remove as removeInstance, run } from '@/helpers/instance'
 import type { ManagedInstanceRecord } from '@/helpers/managed'
@@ -37,6 +38,11 @@ const messages = defineMessages({
 	},
 	badgeRequired: { id: 'managed-instances.badge-required', defaultMessage: 'Required' },
 	badgeOptional: { id: 'managed-instances.badge-optional', defaultMessage: 'On demand' },
+	playersOnline: {
+		id: 'managed-instances.players-online',
+		defaultMessage: '{online}/{max} online',
+	},
+	serverOffline: { id: 'managed-instances.server-offline', defaultMessage: 'Offline' },
 	noInstances: {
 		id: 'managed-instances.empty',
 		defaultMessage: 'The server currently publishes no game instances.',
@@ -113,12 +119,60 @@ function serverLabel(serverInstanceId: string) {
 }
 
 function quickPlayAddress(serverInstanceId: string) {
-	const spec = specFor(serverInstanceId)
-	const address = spec?.server?.address
+	const address = specFor(serverInstanceId)?.server?.address
 	if (!address) return null
-	const port = spec?.server?.port
+	const port = specFor(serverInstanceId)?.server?.port
 	return port && port !== 25565 ? `${address}:${port}` : address
 }
+
+/**
+ * Addresses the active instances play on, sorted, so the online counts follow
+ * whichever of the two sources arrives last: the records and their specs are
+ * fetched independently, and an address read before its spec is known is missing
+ * from that pass only.
+ */
+const serverAddresses = computed(() =>
+	[
+		...new Set(
+			activeRecords.value
+				.map((record) => quickPlayAddress(record.server_instance_id))
+				.filter((address): address is string => Boolean(address)),
+		),
+	].sort(),
+)
+
+const { statusFor: serverStatus } = useServerStatuses(serverAddresses)
+
+/**
+ * Everything one card shows. Building it here keeps the template reading values
+ * instead of repeating the same lookups per row, which also keeps the online
+ * count to a single query per address per refresh.
+ */
+const cards = computed(() =>
+	activeRecords.value.map((record) => {
+		const id = record.server_instance_id
+		const address = quickPlayAddress(id)
+		const status = address ? serverStatus(address) : null
+
+		return {
+			record,
+			version: versionLabel(id),
+			server: serverLabel(id),
+			pending: Boolean(pendingAction(id)),
+			presence: !status
+				? null
+				: status.online
+					? {
+							text: formatMessage(messages.playersOnline, {
+								online: status.players?.online ?? 0,
+								max: status.players?.max ?? 0,
+							}),
+							offline: false,
+						}
+					: { text: formatMessage(messages.serverOffline), offline: true },
+		}
+	}),
+)
 
 async function launch(instanceId: string, serverInstanceId: string) {
 	if (launchingId.value) return
@@ -216,13 +270,13 @@ onMounted(() => {
 
 		<div v-else class="flex flex-col gap-3">
 			<article
-				v-for="record in activeRecords"
-				:key="record.server_instance_id"
+				v-for="card in cards"
+				:key="card.record.server_instance_id"
 				class="flex flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
 			>
 				<img
-					v-if="record.icon_url"
-					:src="record.icon_url"
+					v-if="card.record.icon_url"
+					:src="card.record.icon_url"
 					alt=""
 					class="size-12 shrink-0 rounded-lg object-cover"
 				/>
@@ -235,46 +289,48 @@ onMounted(() => {
 
 				<div class="flex min-w-0 flex-1 flex-col gap-1">
 					<span class="flex items-center gap-2">
-						<span class="truncate font-medium text-contrast">{{ record.name }}</span>
+						<span class="truncate font-medium text-contrast">{{ card.record.name }}</span>
 						<span
 							class="shrink-0 rounded-full px-2 py-0.5 text-[11px]"
 							:class="
-								record.required ? 'bg-surface-2 text-secondary' : 'bg-surface-1 text-secondary'
+								card.record.required ? 'bg-surface-2 text-secondary' : 'bg-surface-1 text-secondary'
 							"
 						>
 							{{
-								record.required
+								card.record.required
 									? formatMessage(messages.badgeRequired)
 									: formatMessage(messages.badgeOptional)
 							}}
 						</span>
 					</span>
-					<span v-if="record.description" class="truncate text-xs text-secondary">
-						{{ record.description }}
+					<span v-if="card.record.description" class="truncate text-xs text-secondary">
+						{{ card.record.description }}
 					</span>
-					<span class="flex flex-wrap gap-3 text-xs text-secondary">
-						<span v-if="versionLabel(record.server_instance_id)">
-							{{ versionLabel(record.server_instance_id) }}
+					<span class="flex flex-wrap items-center gap-3 text-xs text-secondary">
+						<span v-if="card.version">{{ card.version }}</span>
+						<span v-if="card.server" class="flex items-center gap-1.5">
+							{{ card.server }}
+							<span
+								v-if="card.presence"
+								class="inline-flex items-center gap-1"
+								:class="card.presence.offline ? 'text-red' : 'text-green'"
+							>
+								<span v-if="!card.presence.offline" class="size-1.5 rounded-full bg-green" />
+								{{ card.presence.text }}
+							</span>
 						</span>
-						<span v-if="serverLabel(record.server_instance_id)">
-							{{ serverLabel(record.server_instance_id) }}
-						</span>
-						<span v-if="pendingAction(record.server_instance_id)" class="text-brand">
+						<span v-if="card.pending" class="text-brand">
 							{{ formatMessage(messages.notDownloaded) }}
 						</span>
 					</span>
 				</div>
 
 				<div class="flex shrink-0 items-center gap-2">
-					<ButtonStyled
-						v-if="
-							!record.required && record.instance_id && !pendingAction(record.server_instance_id)
-						"
-					>
+					<ButtonStyled v-if="!card.record.required && card.record.instance_id && !card.pending">
 						<button
 							v-tooltip="formatMessage(messages.removeHint)"
 							:disabled="isBusy || removingId !== null"
-							@click="removeOptional(record)"
+							@click="removeOptional(card.record)"
 						>
 							<TrashIcon />
 							{{ formatMessage(messages.remove) }}
@@ -284,10 +340,10 @@ onMounted(() => {
 					<ButtonStyled color="brand" class="shrink-0">
 						<button
 							:disabled="isBusy || launchingId !== null || removingId !== null"
-							@click="play(record)"
+							@click="play(card.record)"
 						>
 							{{
-								launchingId === record.instance_id
+								launchingId === card.record.instance_id
 									? formatMessage(messages.starting)
 									: formatMessage(messages.play)
 							}}

@@ -55,16 +55,18 @@ tasks.shadowJar {
 val authlibInjector by tasks.registering {
     notCompatibleWithConfigurationCache("Downloads and verifies a pinned external Java agent")
     val output = layout.buildDirectory.file("libs/authlib-injector.jar")
-    inputs.property("version", "1.2.8")
+    // The society's authlib-injector fork: same agent entry point as upstream,
+    // built for the society's Yggdrasil endpoints.
+    inputs.property("version", "union-1.4.0")
     inputs.property(
         "sha256",
-        "9c7f4343e6c82034958ffb48c14a2cb0c85928be7283103ce17da00c6d5a7b10",
+        "a81609e39de1f57a4c522e6de5b02bf4037fcb303481730498d730db5e747687",
     )
     outputs.file(output)
 
     doLast {
         val bytes = uri(
-            "https://authlib-injector.yushi.moe/artifact/56/authlib-injector-1.2.8.jar",
+            "https://www.sitmc.club/sit/authlib-injector-union-1.4.0.jar",
         ).toURL().readBytes()
         val checksum = MessageDigest.getInstance("SHA-256")
             .digest(bytes)

@@ -27,9 +27,6 @@ const MRPACK_KIND: &str = "mrpack";
 /// Longest managed instance id accepted, matching the manifest contract.
 const MAX_INSTANCE_ID_LEN: usize = 64;
 
-/// Port used when the manifest provides a `server` object without a port.
-const DEFAULT_SERVER_PORT: u16 = 25565;
-
 /// One manifest document as served by the society backend.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ManagedManifest {
@@ -67,7 +64,11 @@ pub struct ManagedInstanceSpec {
     pub sort: i32,
     pub revision: i64,
     pub minecraft: ManagedMinecraftSpec,
-    pub pack: ManagedPackSpec,
+    /// Absent for a server-only instance: the player joins it, and there is
+    /// nothing for the launcher to download. A manifest is still valid when this
+    /// is `null`, so one such entry cannot take every other instance with it.
+    #[serde(default)]
+    pub pack: Option<ManagedPackSpec>,
     #[serde(default)]
     pub server: Option<ManagedServerSpec>,
     #[serde(default = "default_required")]
@@ -362,10 +363,21 @@ pub async fn sync_manifest(
     let mut actions = Vec::with_capacity(instances.len());
 
     for spec in &instances {
-        if spec.pack.kind != MRPACK_KIND {
+        let Some(pack) = spec.pack.as_ref() else {
+            // A server-only instance has nothing to install, so there is no
+            // switch to act on. It stays in the manifest and out of the local
+            // records rather than turning into an install that cannot finish.
+            tracing::info!(
+                server_instance_id = %spec.id,
+                "Managed instance declares no pack; it is not installed locally"
+            );
+            continue;
+        };
+
+        if pack.kind != MRPACK_KIND {
             tracing::warn!(
                 server_instance_id = %spec.id,
-                pack_kind = %spec.pack.kind,
+                pack_kind = %pack.kind,
                 "Managed instance uses a pack format this launcher cannot install"
             );
         }
@@ -660,7 +672,9 @@ fn validate_managed_spec(spec: &ManagedInstanceSpec) -> crate::Result<()> {
         ))
         .as_error());
     }
-    if spec.pack.url.trim().is_empty() {
+    if let Some(pack) = spec.pack.as_ref()
+        && pack.url.trim().is_empty()
+    {
         return Err(crate::ErrorKind::InputError(format!(
             "Managed instance {} does not declare a pack URL",
             spec.id
@@ -687,13 +701,100 @@ fn validate_manifest_schema(schema: u32) -> crate::Result<()> {
     Ok(())
 }
 
+/// Body and validator of the last successful fetch, per address.
+///
+/// The manifest answers with a strong `ETag`, so re-sending it as
+/// `If-None-Match` turns an unchanged document into an empty `304` and the body
+/// already in hand is reused. The cache lives in memory because it only has to
+/// survive between syncs in one run; the previous manifest is persisted
+/// separately as the fallback for a failed fetch.
+static MANIFEST_VALIDATORS: std::sync::OnceLock<
+    dashmap::DashMap<String, (String, String)>,
+> = std::sync::OnceLock::new();
+
+fn manifest_validators() -> &'static dashmap::DashMap<String, (String, String)> {
+    MANIFEST_VALIDATORS.get_or_init(dashmap::DashMap::new)
+}
+
+/// How long to wait before the single retry of a rate-limited request, used when
+/// the server sends no usable `Retry-After`.
+const RATE_LIMIT_FALLBACK_WAIT: std::time::Duration =
+    std::time::Duration::from_secs(5);
+
 async fn fetch_json_body(url: &str) -> crate::Result<String> {
-    let response = INSECURE_REQWEST_CLIENT
+    let cached = manifest_validators()
         .get(url)
-        .header(reqwest::header::ACCEPT, "application/json")
-        .send()
-        .await?;
+        .map(|entry| entry.value().clone());
+
+    match request_json_body(url, cached.as_ref().map(|(etag, _)| etag.as_str()))
+        .await?
+    {
+        JsonBody::Fresh(body) => Ok(body),
+        JsonBody::NotModified => cached.map(|(_, body)| body).ok_or_else(|| {
+            crate::ErrorKind::HttpError {
+                status: 304,
+                method: "GET".to_string(),
+                url: url.to_string(),
+            }
+            .as_error()
+        }),
+        JsonBody::RateLimited { wait } => {
+            // One retry, after the wait the server asked for: the manifest is
+            // small and the limit resets quickly, so giving up immediately would
+            // leave a player without instances for no reason.
+            tokio::time::sleep(wait).await;
+            match request_json_body(url, cached.as_ref().map(|(etag, _)| etag.as_str()))
+                .await?
+            {
+                JsonBody::Fresh(body) => Ok(body),
+                JsonBody::NotModified => cached
+                    .map(|(_, body)| body)
+                    .ok_or_else(|| rate_limited_error(url)),
+                JsonBody::RateLimited { .. } => Err(rate_limited_error(url)),
+            }
+        }
+    }
+}
+
+fn rate_limited_error(url: &str) -> crate::Error {
+    crate::ErrorKind::HttpError {
+        status: 429,
+        method: "GET".to_string(),
+        url: url.to_string(),
+    }
+    .as_error()
+}
+
+enum JsonBody {
+    Fresh(String),
+    NotModified,
+    RateLimited { wait: std::time::Duration },
+}
+
+async fn request_json_body(
+    url: &str,
+    etag: Option<&str>,
+) -> crate::Result<JsonBody> {
+    let mut request = INSECURE_REQWEST_CLIENT
+        .get(url)
+        .header(reqwest::header::ACCEPT, "application/json");
+    if let Some(etag) = etag {
+        request = request.header(reqwest::header::IF_NONE_MATCH, etag);
+    }
+
+    let response = request.send().await?;
     let status = response.status();
+
+    if status == reqwest::StatusCode::NOT_MODIFIED {
+        return Ok(JsonBody::NotModified);
+    }
+
+    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Ok(JsonBody::RateLimited {
+            wait: retry_after(&response),
+        });
+    }
+
     if !status.is_success() {
         return Err(crate::ErrorKind::HttpError {
             status: status.as_u16(),
@@ -702,7 +803,32 @@ async fn fetch_json_body(url: &str) -> crate::Result<String> {
         }
         .as_error());
     }
-    Ok(response.text().await?)
+
+    let etag = response
+        .headers()
+        .get(reqwest::header::ETAG)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
+
+    let body = response.text().await?;
+    if let Some(etag) = etag {
+        manifest_validators()
+            .insert(url.to_string(), (etag, body.clone()));
+    }
+
+    Ok(JsonBody::Fresh(body))
+}
+
+/// Reads `Retry-After`, which the server sends as a number of seconds.
+fn retry_after(response: &reqwest::Response) -> std::time::Duration {
+    response
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .map(std::time::Duration::from_secs)
+        .map(|wait| wait.min(std::time::Duration::from_secs(60)))
+        .unwrap_or(RATE_LIMIT_FALLBACK_WAIT)
 }
 
 fn parse_manifest(
@@ -764,7 +890,8 @@ async fn store_spec(
     let server_port = spec
         .server
         .as_ref()
-        .map(|server| server.port.unwrap_or(DEFAULT_SERVER_PORT))
+        .and_then(|server| server.port)
+        .map(i64::from)
         .unwrap_or(0);
 
     sqlx::query(

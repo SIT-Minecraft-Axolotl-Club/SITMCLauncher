@@ -59,13 +59,73 @@ pub fn is_yggdrasil_api_root(api_root: &str) -> bool {
     api_root.trim().trim_end_matches('/') == YGGDRASIL_API_ROOT
 }
 
+/// Status endpoint of the society's server-query service. The address to look
+/// up is appended as the path, so `play.sitmc.club` queries
+/// `https://query.sitmc.club/play.sitmc.club`.
+pub const SERVER_QUERY_BASE_URL: &str = "https://query.sitmc.club";
+
+/// What the query service reports about one Minecraft server.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct ServerStatus {
+    pub online: bool,
+    pub hostname: Option<String>,
+    #[serde(default)]
+    pub players: Option<ServerPlayerCounts>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub ping: Option<u64>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct ServerPlayerCounts {
+    pub online: u64,
+    pub max: u64,
+}
+
+/// Queries the society's server-query service for one address.
+///
+/// The response is returned even when the service itself reports the server
+/// offline (`online: false`); only transport errors become `Err`.
+pub async fn query_server(address: &str) -> crate::Result<ServerStatus> {
+    let host = address.trim().trim_end_matches('/');
+    let host = host.rsplit_once("://").map_or(host, |(_, rest)| rest);
+    let url = format!("{SERVER_QUERY_BASE_URL}/{host}");
+
+    let client = crate::util::fetch::build_proxied_client(
+        &crate::util::proxy::ProxyConfig::default(),
+    );
+    let status = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|error| {
+            crate::ErrorKind::LauncherError(format!(
+                "Could not reach the server query service: {error}"
+            ))
+        })?
+        .error_for_status()
+        .map_err(|error| {
+            crate::ErrorKind::LauncherError(format!(
+                "The server query service rejected the request: {error}"
+            ))
+        })?;
+
+    Ok(status.json().await.map_err(|error| {
+        crate::ErrorKind::LauncherError(format!(
+            "The server query service returned an unreadable response: {error}"
+        ))
+    })?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn recognizes_the_sitmc_api_root() {
-        assert!(is_yggdrasil_api_root(YGGDRASIL_API_ROOT));
+    fn recognizes_the_sitmc_api_root() {        assert!(is_yggdrasil_api_root(YGGDRASIL_API_ROOT));
         assert!(is_yggdrasil_api_root(&format!("{YGGDRASIL_API_ROOT}/")));
         assert!(is_yggdrasil_api_root(&format!(" {YGGDRASIL_API_ROOT} ")));
     }

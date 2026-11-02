@@ -8843,6 +8843,9 @@
   "friend-sites.play": {
     "message": "启动"
   },
+  "friend-sites.players-online": {
+    "message": "在线 {online}/{max}"
+  },
   "friend-sites.refresh": {
     "message": "刷新"
   },
@@ -8854,6 +8857,9 @@
   },
   "friend-sites.retry": {
     "message": "重试"
+  },
+  "friend-sites.server-offline": {
+    "message": "离线"
   },
   "friend-sites.show-all": {
     "message": "显示全部 {count} 个"
@@ -10474,6 +10480,12 @@
   },
   "instance.worlds.world_in_use": {
     "message": "世界正在使用中"
+  },
+  "managed-instances.players-online": {
+    "message": "在线 {online}/{max}"
+  },
+  "managed-instances.server-offline": {
+    "message": "离线"
   },
   "minecraft-account.copy-uuid": {
     "message": "复制 UUID"

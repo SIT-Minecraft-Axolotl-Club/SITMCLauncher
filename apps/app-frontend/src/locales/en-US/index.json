@@ -10469,6 +10469,9 @@
   "friend-sites.play": {
     "message": "Play"
   },
+  "friend-sites.players-online": {
+    "message": "Online: {online}/{max}"
+  },
   "friend-sites.refresh": {
     "message": "Refresh"
   },
@@ -10480,6 +10483,9 @@
   },
   "friend-sites.retry": {
     "message": "Retry"
+  },
+  "friend-sites.server-offline": {
+    "message": "Offline"
   },
   "friend-sites.show-all": {
     "message": "Show all {count}"
@@ -12170,6 +12176,9 @@
   "managed-instances.play-downloads": {
     "message": "Play (downloads first)"
   },
+  "managed-instances.players-online": {
+    "message": "Online: {online}/{max}"
+  },
   "managed-instances.ready": {
     "message": "Up to date"
   },
@@ -12181,6 +12190,9 @@
   },
   "managed-instances.remove-hint": {
     "message": "Removing it frees the disk space; the instance stays listed so you can download it again."
+  },
+  "managed-instances.server-offline": {
+    "message": "Offline"
   },
   "managed-instances.starting": {
     "message": "Starting..."

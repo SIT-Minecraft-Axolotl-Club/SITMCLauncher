@@ -10,6 +10,7 @@ import {
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, ref } from 'vue'
 
+import { useServerStatuses } from '@/composables/useServerStatuses'
 import { SitmcConfig } from '@/config'
 import type { FriendInstance, FriendsDocument, FriendSite } from '@/helpers/friend-sites'
 import {
@@ -22,6 +23,7 @@ import {
 	uninstallFriendInstance,
 } from '@/helpers/friend-sites'
 import { run } from '@/helpers/instance'
+import type { SitmcServerStatus } from '@/helpers/server-query'
 
 const { formatMessage } = useVIntl()
 const { handleError } = injectNotificationManager()
@@ -63,6 +65,11 @@ const messages = defineMessages({
 		defaultMessage: 'Not refreshed just now; this list may be out of date.',
 	},
 	visit: { id: 'friend-sites.visit', defaultMessage: 'Visit the site' },
+	playersOnline: {
+		id: 'friend-sites.players-online',
+		defaultMessage: '{online}/{max} online',
+	},
+	serverOffline: { id: 'friend-sites.server-offline', defaultMessage: 'Offline' },
 })
 
 /** Tauri rejects a command with a string or a plain object, not always an Error. */
@@ -131,6 +138,25 @@ function serverLabel(instance: FriendInstance): string {
 	const server = instance.server
 	if (!server?.address) return ''
 	return server.port && server.port !== 25565 ? `${server.address}:${server.port}` : server.address
+}
+
+/** Every address the listed instances play on, so each is queried once. */
+const serverAddresses = computed(() =>
+	[
+		...new Set(
+			sites.value
+				.flatMap((site) => site.instances)
+				.map((instance) => serverLabel(instance))
+				.filter((address) => address.length > 0),
+		),
+	].sort(),
+)
+
+const { statusFor } = useServerStatuses(serverAddresses)
+
+function serverStatus(instance: FriendInstance): SitmcServerStatus | null {
+	const address = serverLabel(instance)
+	return address ? statusFor(address) : null
 }
 
 async function install(site: FriendSite, instance: FriendInstance): Promise<void> {
@@ -293,6 +319,23 @@ onMounted(() => {
 								<span v-if="serverLabel(instance)" class="flex min-w-0 items-center gap-1">
 									<ServerIcon class="size-3 shrink-0" />
 									<span class="truncate">{{ serverLabel(instance) }}</span>
+									<template v-if="serverStatus(instance)">
+										<span
+											v-if="serverStatus(instance)!.online"
+											class="flex shrink-0 items-center gap-1 text-green"
+										>
+											<span class="size-1.5 rounded-full bg-green" />
+											{{
+												formatMessage(messages.playersOnline, {
+													online: serverStatus(instance)!.players?.online ?? 0,
+													max: serverStatus(instance)!.players?.max ?? 0,
+												})
+											}}
+										</span>
+										<span v-else class="shrink-0 text-red">
+											{{ formatMessage(messages.serverOffline) }}
+										</span>
+									</template>
 								</span>
 							</span>
 						</div>

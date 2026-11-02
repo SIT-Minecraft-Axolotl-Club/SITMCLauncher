@@ -197,6 +197,15 @@ fn is_skin_editor_referer(
     true
 }
 
+/// Queries the society's server-query service for one Minecraft server address.
+///
+/// The service reports the server's own state, including a server it found
+/// offline, so an unreachable server is still a successful answer here.
+#[tauri::command]
+async fn sitmc_query_server(address: String) -> api::Result<theseus::sitmc::ServerStatus> {
+    Ok(theseus::sitmc::query_server(&address).await?)
+}
+
 /// Whether a data directory from the launcher this build was forked from is
 /// still waiting to be moved. The boot screen asks once, before it initializes
 /// the state that would read that data.
@@ -717,7 +726,7 @@ fn main() {
 
     let _log_guard = theseus::start_logger(&tauri_context.config().identifier);
 
-    tracing::info!("Initialized tracing subscriber. Loading Axolotl Launcher!");
+    tracing::info!("Initialized tracing subscriber. Loading SITMC Launcher!");
 
     let mut builder = tauri::Builder::default().register_uri_scheme_protocol(
         "axolotl-skin",
@@ -901,6 +910,7 @@ fn main() {
         .manage(PendingUpdateData::default())
         .invoke_handler(tauri::generate_handler![
             initialize_state,
+            sitmc_query_server,
             legacy_migration_pending,
             legacy_migrate,
             get_update_channel,

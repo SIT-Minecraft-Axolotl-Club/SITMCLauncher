@@ -47,7 +47,8 @@ export interface ManagedInstanceSpec {
 	sort: number
 	revision: number
 	minecraft: ManagedMinecraftSpec
-	pack: ManagedPackSpec
+	/** `null` for a server-only instance: there is nothing to install. */
+	pack: ManagedPackSpec | null
 	server: ManagedServerSpec | null
 	required: boolean
 }
@@ -206,18 +207,22 @@ export function managedOptionalActions(report: ManagedSyncReport): ManagedInstan
  */
 export async function applyManagedInstanceAction(action: ManagedInstanceAction): Promise<string> {
 	const spec = action.spec
-	if (spec.pack.kind !== MANAGED_PACK_KIND) {
-		throw new Error(`Managed instance "${spec.id}" uses unsupported pack kind "${spec.pack.kind}"`)
+	const pack = spec.pack
+	if (!pack) {
+		throw new Error(`Managed instance "${spec.id}" declares no pack, so it cannot be installed`)
 	}
-	if (!spec.pack.url.trim()) {
+	if (pack.kind !== MANAGED_PACK_KIND) {
+		throw new Error(`Managed instance "${spec.id}" uses unsupported pack kind "${pack.kind}"`)
+	}
+	if (!pack.url.trim()) {
 		throw new Error(`Managed instance "${spec.id}" declares no pack URL`)
 	}
 
 	const location: CreatePackLocation = {
 		type: 'fromFile',
-		url: spec.pack.url,
-		sha1: spec.pack.sha1,
-		size: spec.pack.size,
+		url: pack.url,
+		sha1: pack.sha1,
+		size: pack.size,
 		display: {
 			name: spec.name,
 			gameVersion: spec.minecraft.game_version,
