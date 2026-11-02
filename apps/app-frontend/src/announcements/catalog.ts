@@ -28,12 +28,12 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
-		id: 'launcher-2.2.2',
-		version: '2.2.2',
+		id: 'launcher-2.2.3',
+		version: '2.2.3',
 		publishedAt: '2026-11-02',
 		title: {
-			'en-US': 'SITMC Launcher 2.2.2',
-			'zh-CN': 'SITMC 启动器 2.2.2',
+			'en-US': 'SITMC Launcher 2.2.3',
+			'zh-CN': 'SITMC 启动器 2.2.3',
 		},
 		changes: {
 			added: [
@@ -49,6 +49,12 @@ export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 					'en-US':
 						"Signing in now uses the society's own authlib-injector build, matching what the society servers expect from an external login.",
 					'zh-CN': '账号登录改用社团维护的 authlib-injector 版本，与社团服务器的外置登录保持一致。',
+				},
+				{
+					'en-US':
+						"Installing and uninstalling now use the society's own window instead of the generic Windows wizard: it picks up the colours of the society site, and it asks where the game data should live as well as where the program goes.",
+					'zh-CN':
+						'安装与卸载改为社团自己的界面，不再是系统默认的灰色向导：配色与社团官网一致，并且可以同时选择「程序安装位置」和「游戏数据目录」。',
 				},
 			],
 			fixed: [
