@@ -1,0 +1,114 @@
+name: SITMC Linux builds
+
+# Linux packages cannot be produced on the Windows machine the society releases
+# from: a Tauri desktop bundle has to be linked against the target's own
+# WebKitGTK and system libraries. This workflow builds both Linux architectures
+# on GitHub runners so a release does not depend on someone owning a Linux box.
+#
+# Signing is opt-in because it needs the updater private key. Without it the
+# build is still installable, it just cannot be offered as an in-place update.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sign:
+        description: Sign the packages so existing installs can update in place
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sitmc-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            runner: ubuntu-24.04
+          - name: Linux arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    env:
+      SQLX_OFFLINE: true
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+
+      - uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: sitmc-linux-deps
+          cache-on-failure: true
+
+      - name: Install Linux bundle dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev
+
+      - run: pnpm install --frozen-lockfile
+
+      # The skin editor ships Blockbench, which the frontend build copies in.
+      - name: Install Blockbench skin editor dependencies
+        run: npm ci
+        working-directory: third-party/blockbench
+
+      - name: Build signed packages
+        if: ${{ inputs.sign }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "${TAURI_SIGNING_PRIVATE_KEY}" ]; then
+            echo "::error::Signing was requested but TAURI_SIGNING_PRIVATE_KEY is not set."
+            exit 1
+          fi
+          pnpm --filter @modrinth/app build -- \
+            --config '{"bundle":{"targets":["appimage","deb"]}}' \
+            --config tauri-updater.conf.json
+
+      - name: Build packages
+        if: ${{ !inputs.sign }}
+        run: |
+          pnpm --filter @modrinth/app build -- \
+            --config '{"bundle":{"targets":["appimage","deb"],"createUpdaterArtifacts":false}}'
+
+      - name: Collect bundles
+        run: |
+          mkdir -p dist-linux
+          find target/release/bundle -type f \( \
+            -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
+            -o -name '*.AppImage.sig' -o -name '*.deb.sig' -o -name '*.rpm.sig' \
+          \) -exec cp {} dist-linux/ \;
+          ls -la dist-linux
+
+      - name: Upload packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sitmc-linux-${{ matrix.runner }}
+          path: dist-linux/*
+          if-no-files-found: error
+          retention-days: 14
