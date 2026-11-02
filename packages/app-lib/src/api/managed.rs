@@ -639,13 +639,21 @@ pub async fn ensure_instance_runnable(instance_id: &str) -> crate::Result<()> {
     Ok(())
 }
 
-/// Rejects an identifier that could escape the managed cache directory or that
-/// no server should ever emit.
+/// Rejects an identifier that could escape a directory or that no server should
+/// ever emit.
+///
+/// A featured entry can come from a friend site and carries that site's prefix,
+/// e.g. `ysumc:survival`, so a colon is a normal part of an id. The id is a
+/// database key in this module and never becomes a path, but separators and
+/// traversal are still refused so it cannot become one by accident later.
 fn validate_server_instance_id(value: &str) -> crate::Result<()> {
     let safe = !value.is_empty()
         && value.len() <= MAX_INSTANCE_ID_LEN
+        && value != "."
+        && value != ".."
         && value.bytes().all(|byte| {
-            byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_'
+            byte.is_ascii_alphanumeric()
+                || matches!(byte, b'-' | b'_' | b':' | b'.')
         });
     if !safe {
         return Err(crate::ErrorKind::InputError(format!(
@@ -1000,10 +1008,58 @@ mod tests {
         assert!(validate_server_instance_id("survival-12_a").is_ok());
         assert!(validate_server_instance_id("").is_err());
         assert!(validate_server_instance_id("../escape").is_err());
+        assert!(validate_server_instance_id("a/b").is_err());
+        assert!(validate_server_instance_id("a\\b").is_err());
+        assert!(validate_server_instance_id(".").is_err());
+        assert!(validate_server_instance_id("..").is_err());
         assert!(
             validate_server_instance_id(&"a".repeat(MAX_INSTANCE_ID_LEN + 1))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn accepts_a_featured_instance_from_a_friend_site() {
+        // A featured entry keeps the prefix of the site it came from, so the id
+        // the society publishes for YSUMC's SkyExplorer is `ysumc:skyexploer`.
+        // Rejecting the colon rejected the whole manifest, which hid every
+        // instance rather than just that one.
+        assert!(validate_server_instance_id("ysumc:skyexploer").is_ok());
+
+        let body = r#"{
+            "schema": 1,
+            "launcher": { "min_version": null, "latest_version": null, "force_update": false },
+            "instances": [{
+                "id": "ysumc:skyexploer",
+                "name": "SkyExplorer",
+                "description": null,
+                "icon_url": null,
+                "sort": -1,
+                "revision": 3,
+                "minecraft": {
+                    "game_version": "1.21.1",
+                    "loader": "neoforge",
+                    "loader_version": "21.1.249"
+                },
+                "pack": {
+                    "kind": "mrpack",
+                    "url": "https://example.invalid/pack.mrpack",
+                    "sha1": null,
+                    "size": null
+                },
+                "server": { "address": "game.example.invalid", "port": 50003 },
+                "required": false
+            }]
+        }"#;
+
+        let manifest =
+            parse_manifest("https://example.invalid/manifest", body)
+                .expect("a featured entry is part of the contract");
+        let featured = &manifest.instances[0];
+
+        assert_eq!(featured.id, "ysumc:skyexploer");
+        assert_eq!(featured.sort, -1);
+        validate_managed_spec(featured).expect("the featured entry is installable");
     }
 
     #[test]

@@ -268,11 +268,11 @@ onMounted(() => {
 			{{ formatMessage(messages.noInstances) }}
 		</p>
 
-		<div v-else class="flex flex-col gap-3">
+		<div v-else class="grid grid-cols-1 gap-3 xl:grid-cols-2">
 			<article
 				v-for="card in cards"
 				:key="card.record.server_instance_id"
-				class="flex flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
+				class="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
 			>
 				<img
 					v-if="card.record.icon_url"

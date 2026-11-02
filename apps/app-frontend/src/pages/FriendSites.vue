@@ -267,7 +267,7 @@ onMounted(() => {
 				:key="site.site_id"
 				class="rounded-xl border border-divider bg-surface-2 p-5"
 			>
-				<header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+				<header class="mb-3 flex flex-wrap items-center justify-between gap-3">
 					<div class="flex min-w-0 flex-col">
 						<h2 class="m-0 truncate text-lg font-semibold text-contrast">
 							{{ site.name }}
@@ -298,12 +298,25 @@ onMounted(() => {
 					</div>
 				</header>
 
-				<div class="flex flex-col gap-3">
+				<div class="grid grid-cols-1 gap-3 xl:grid-cols-2">
 					<article
 						v-for="instance in site.instances"
 						:key="instance.id"
-						class="flex flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
+						class="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
 					>
+						<img
+							v-if="instance.icon_url"
+							:src="instance.icon_url"
+							alt=""
+							class="size-12 shrink-0 rounded-lg object-cover"
+						/>
+						<div
+							v-else
+							class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs font-semibold text-secondary"
+						>
+							{{ site.name.slice(0, 2) }}
+						</div>
+
 						<div class="flex min-w-0 flex-1 flex-col gap-1">
 							<span class="truncate font-medium text-contrast">{{ instance.name }}</span>
 							<span v-if="instance.description" class="truncate text-xs text-secondary">

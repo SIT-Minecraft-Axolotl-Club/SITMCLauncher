@@ -28,6 +28,57 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-2.2.2',
+		version: '2.2.2',
+		publishedAt: '2026-11-02',
+		title: {
+			'en-US': 'SITMC Launcher 2.2.2',
+			'zh-CN': 'SITMC 启动器 2.2.2',
+		},
+		changes: {
+			added: [
+				{
+					'en-US':
+						'Each instance now shows how many players are on the server it connects to, and the friend-site page shows it too. The count refreshes every minute, so you can tell whether anyone is around before starting the game.',
+					'zh-CN':
+						'实例卡片现在会显示所连服务器的在线人数，友站页面同样支持。数字每分钟刷新一次，开局前就能看出服务器上有没有人。',
+				},
+			],
+			changed: [
+				{
+					'en-US':
+						"Signing in now uses the society's own authlib-injector build, matching what the society servers expect from an external login.",
+					'zh-CN': '账号登录改用社团维护的 authlib-injector 版本，与社团服务器的外置登录保持一致。',
+				},
+			],
+			fixed: [
+				{
+					'en-US':
+						'A featured instance borrowed from a friend site could make the launcher reject the whole instance list, so every instance disappeared instead of the featured one appearing first. Featured entries now load and stay at the top.',
+					'zh-CN':
+						'精选的友站实例曾导致启动器拒收整份实例清单——不是精选置顶，而是所有实例一起消失。现在精选实例能正常加载并排在最前面。',
+				},
+				{
+					'en-US':
+						'An instance published without a modpack is now skipped on its own instead of failing the whole list.',
+					'zh-CN': '没有整合包的实例现在会单独跳过，不再连累整份清单。',
+				},
+				{
+					'en-US':
+						'When the server left the port unspecified, the launcher treated it as 25565 and could connect to the wrong place. The address is now passed through as published.',
+					'zh-CN':
+						'服务端未填写端口时，启动器会擅自当成 25565，可能连到错误的位置；现在按服务端下发的地址原样连接。',
+				},
+				{
+					'en-US':
+						'The launcher re-downloads the instance list only when it changed, and waits instead of failing when the service asks it to slow down.',
+					'zh-CN':
+						'实例清单现在只在内容变化时重新下载；被服务端限流时会等待后重试，而不是直接报错。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-2.2.1',
 		version: '2.2.1',
 		publishedAt: '2026-10-23',
