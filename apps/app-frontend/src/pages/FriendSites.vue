@@ -23,6 +23,7 @@ import {
 	uninstallFriendInstance,
 } from '@/helpers/friend-sites'
 import { run } from '@/helpers/instance'
+import { defaultInstanceIconUrl } from '@/helpers/instance-icons'
 import type { SitmcServerStatus } from '@/helpers/server-query'
 
 const { formatMessage } = useVIntl()
@@ -236,7 +237,7 @@ onMounted(() => {
 
 		<section
 			v-if="error"
-			class="flex flex-wrap items-center gap-3 rounded-xl border border-divider bg-surface-2 p-5"
+			class="flex flex-wrap items-center gap-3 rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 		>
 			<p class="m-0 flex-1 text-sm text-red">{{ formatMessage(messages.failed) }} {{ error }}</p>
 			<ButtonStyled size="small">
@@ -248,7 +249,7 @@ onMounted(() => {
 
 		<section
 			v-else-if="loading && sites.length === 0"
-			class="flex items-center gap-3 rounded-xl border border-divider bg-surface-2 p-5"
+			class="flex items-center gap-3 rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 		>
 			<DownloadIcon class="size-5 shrink-0 text-brand" />
 			<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.loading) }}</p>
@@ -256,7 +257,7 @@ onMounted(() => {
 
 		<section
 			v-else-if="sites.length === 0"
-			class="rounded-xl border border-divider bg-surface-2 p-5"
+			class="rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 		>
 			<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.empty) }}</p>
 		</section>
@@ -265,11 +266,11 @@ onMounted(() => {
 			<section
 				v-for="site in sites"
 				:key="site.site_id"
-				class="rounded-xl border border-divider bg-surface-2 p-5"
+				class="rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 			>
 				<header class="mb-3 flex flex-wrap items-center justify-between gap-3">
 					<div class="flex min-w-0 flex-col">
-						<h2 class="m-0 truncate text-lg font-semibold text-contrast">
+						<h2 class="m-0 truncate text-base font-bold text-contrast">
 							{{ site.name }}
 						</h2>
 						<span v-if="site.description" class="truncate text-xs text-secondary">
@@ -298,101 +299,108 @@ onMounted(() => {
 					</div>
 				</header>
 
-				<div class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
-					<article
+				<div class="grid grid-cols-2 gap-x-2 gap-y-1">
+					<div
 						v-for="instance in site.instances"
 						:key="instance.id"
-						class="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
+						class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-button-bg"
 					>
-						<img
-							v-if="instance.icon_url"
-							:src="instance.icon_url"
-							alt=""
-							class="size-12 shrink-0 rounded-lg object-cover"
-						/>
-						<div
-							v-else
-							class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs font-semibold text-secondary"
-						>
-							{{ site.name.slice(0, 2) }}
+						<div class="relative shrink-0">
+							<img
+								:src="instance.icon_url || defaultInstanceIconUrl"
+								alt=""
+								class="size-12 rounded-lg object-cover"
+							/>
+							<span
+								v-if="serverStatus(instance)"
+								class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-solid border-surface-2"
+								:class="serverStatus(instance)!.online ? 'bg-green' : 'bg-red'"
+								aria-hidden="true"
+							/>
 						</div>
 
-						<div class="flex min-w-0 flex-1 flex-col gap-1">
-							<span class="truncate font-medium text-contrast">{{ instance.name }}</span>
-							<span v-if="instance.description" class="truncate text-xs text-secondary">
+						<div class="flex min-w-0 flex-col gap-0.5">
+							<span class="line-clamp-2 min-w-0 font-bold leading-normal text-contrast">
+								{{ instance.name }}
+							</span>
+							<span
+								v-if="instance.description"
+								class="line-clamp-2 text-xs leading-snug text-secondary"
+							>
 								{{ instance.description }}
 							</span>
-							<span class="flex flex-wrap gap-3 text-xs text-secondary">
-								<span v-if="instance.minecraft?.game_version">
-									{{ instance.minecraft.game_version }}
-								</span>
-								<span v-if="loaderLabel(instance)" class="capitalize">
-									{{ loaderLabel(instance) }}
-								</span>
-								<span v-if="serverLabel(instance)" class="flex min-w-0 items-center gap-1">
-									<ServerIcon class="size-3 shrink-0" />
-									<span class="truncate">{{ serverLabel(instance) }}</span>
-									<template v-if="serverStatus(instance)">
-										<span
-											v-if="serverStatus(instance)!.online"
-											class="flex shrink-0 items-center gap-1 text-green"
-										>
-											<span class="size-1.5 rounded-full bg-green" />
-											{{
-												formatMessage(messages.playersOnline, {
-													online: serverStatus(instance)!.players?.online ?? 0,
-													max: serverStatus(instance)!.players?.max ?? 0,
-												})
-											}}
-										</span>
-										<span v-else class="shrink-0 text-red">
-											{{ formatMessage(messages.serverOffline) }}
-										</span>
-									</template>
-								</span>
+							<span v-else-if="site.name" class="truncate text-[11px] text-secondary">
+								{{ site.name }}
 							</span>
 						</div>
 
-						<div class="flex shrink-0 items-center gap-2">
+						<div class="flex items-center gap-1">
 							<template v-if="installedId(instance)">
-								<ButtonStyled>
+								<ButtonStyled type="transparent" circular>
 									<button
 										v-tooltip="formatMessage(messages.removeHint)"
 										:disabled="launchingId !== null || removingId !== null"
 										@click="removeInstalled(instance)"
 									>
 										<TrashIcon />
-										{{ formatMessage(messages.remove) }}
 									</button>
 								</ButtonStyled>
-								<ButtonStyled color="brand">
+								<ButtonStyled color="brand" circular>
 									<button
+										v-tooltip="formatMessage(messages.play)"
 										:disabled="launchingId !== null || removingId !== null"
 										@click="launch(instance)"
 									>
-										<PlayIcon />
-										{{
-											launchingId === installedId(instance)
-												? formatMessage(messages.starting)
-												: formatMessage(messages.play)
-										}}
+										<PlayIcon class="translate-x-[1px]" />
 									</button>
 								</ButtonStyled>
 							</template>
-							<ButtonStyled v-else-if="isInstallable(instance)" color="brand">
-								<button :disabled="installingKey !== null" @click="install(site, instance)">
-									{{
-										installingKey === instanceKey(site, instance)
-											? formatMessage(messages.installing)
-											: formatMessage(messages.install)
-									}}
+							<ButtonStyled v-else-if="isInstallable(instance)" color="brand" circular>
+								<button
+									v-tooltip="formatMessage(messages.install)"
+									:disabled="installingKey !== null"
+									@click="install(site, instance)"
+								>
+									<DownloadIcon />
 								</button>
 							</ButtonStyled>
-							<span v-else class="text-xs text-secondary">
+							<span v-else class="text-[11px] text-secondary">
 								{{ formatMessage(messages.unavailable) }}
 							</span>
 						</div>
-					</article>
+
+						<div
+							class="col-span-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-secondary"
+						>
+							<span v-if="instance.minecraft?.game_version" class="truncate">
+								{{ instance.minecraft.game_version }}
+							</span>
+							<span v-if="loaderLabel(instance)" class="truncate capitalize">
+								{{ loaderLabel(instance) }}
+							</span>
+							<span v-if="serverLabel(instance)" class="flex min-w-0 items-center gap-1">
+								<ServerIcon class="size-3 shrink-0" />
+								<span class="truncate">{{ serverLabel(instance) }}</span>
+								<template v-if="serverStatus(instance)">
+									<span
+										v-if="serverStatus(instance)!.online"
+										class="flex shrink-0 items-center gap-1 text-green"
+									>
+										<span class="size-1.5 rounded-full bg-green" />
+										{{
+											formatMessage(messages.playersOnline, {
+												online: serverStatus(instance)!.players?.online ?? 0,
+												max: serverStatus(instance)!.players?.max ?? 0,
+											})
+										}}
+									</span>
+									<span v-else class="shrink-0 text-red">
+										{{ formatMessage(messages.serverOffline) }}
+									</span>
+								</template>
+							</span>
+						</div>
+					</div>
 				</div>
 			</section>
 		</template>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { RefreshCwIcon, TrashIcon } from '@modrinth/assets'
+import { DownloadIcon, PlayIcon, RefreshCwIcon, ServerIcon, TrashIcon } from '@modrinth/assets'
 import { ButtonStyled, defineMessages, injectNotificationManager, useVIntl } from '@modrinth/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import { useManagedInstances } from '@/composables/useManagedInstances'
 import { useServerStatuses } from '@/composables/useServerStatuses'
-import { SitmcConfig } from '@/config'
 import { remove as removeInstance, run } from '@/helpers/instance'
+import { defaultInstanceIconUrl } from '@/helpers/instance-icons'
 import type { ManagedInstanceRecord } from '@/helpers/managed'
 import { managed_ensure_runnable } from '@/helpers/managed'
 
@@ -247,10 +247,10 @@ onMounted(() => {
 	<section
 		v-if="isConfigured"
 		data-onboarding-id="managed-instances"
-		class="mb-6 rounded-xl border border-divider bg-surface-2 p-5"
+		class="rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 	>
-		<header class="mb-4 flex flex-wrap items-center justify-between gap-3">
-			<h2 class="m-0 text-lg font-semibold text-contrast">
+		<header class="mb-3 flex flex-wrap items-center justify-between gap-3">
+			<h2 class="m-0 text-base font-bold text-contrast">
 				{{ formatMessage(messages.title) }}
 			</h2>
 			<div class="flex items-center gap-3">
@@ -268,95 +268,106 @@ onMounted(() => {
 			{{ formatMessage(messages.noInstances) }}
 		</p>
 
-		<div v-else class="grid gap-3 grid-cols-[repeat(auto-fill,minmax(20rem,1fr))]">
-			<article
+		<div v-else class="grid grid-cols-2 gap-x-2 gap-y-1">
+			<div
 				v-for="card in cards"
 				:key="card.record.server_instance_id"
-				class="flex min-w-0 flex-wrap items-center gap-4 rounded-lg border border-divider bg-surface-3 p-4"
+				class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-lg px-2 py-2 transition-colors hover:bg-button-bg"
 			>
-				<img
-					v-if="card.record.icon_url"
-					:src="card.record.icon_url"
-					alt=""
-					class="size-12 shrink-0 rounded-lg object-cover"
-				/>
-				<div
-					v-else
-					class="flex size-12 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-xs font-semibold text-secondary"
-				>
-					{{ SitmcConfig.serverLabel }}
+				<div class="relative shrink-0">
+					<img
+						:src="card.record.icon_url || defaultInstanceIconUrl"
+						alt=""
+						class="size-12 rounded-lg object-cover"
+					/>
+					<span
+						v-if="card.presence"
+						class="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-solid border-surface-2"
+						:class="card.presence.offline ? 'bg-red' : 'bg-green'"
+						aria-hidden="true"
+					/>
 				</div>
 
-				<div class="flex min-w-0 flex-1 flex-col gap-1">
-					<span class="flex items-center gap-2">
-						<span class="truncate font-medium text-contrast">{{ card.record.name }}</span>
+				<div class="flex min-w-0 flex-col gap-0.5">
+					<span class="flex min-w-0 items-center gap-1.5">
+						<span class="line-clamp-2 min-w-0 font-bold leading-normal text-contrast">
+							{{ card.record.name }}
+						</span>
 						<span
-							class="shrink-0 rounded-full px-2 py-0.5 text-[11px]"
-							:class="
-								card.record.required ? 'bg-surface-2 text-secondary' : 'bg-surface-1 text-secondary'
-							"
+							v-if="card.record.required"
+							class="shrink-0 rounded-full bg-surface-3 px-1.5 py-px text-[10px] text-secondary"
 						>
-							{{
-								card.record.required
-									? formatMessage(messages.badgeRequired)
-									: formatMessage(messages.badgeOptional)
-							}}
+							{{ formatMessage(messages.badgeRequired) }}
 						</span>
 					</span>
-					<span v-if="card.record.description" class="truncate text-xs text-secondary">
+					<span
+						v-if="card.record.description"
+						class="line-clamp-2 text-xs leading-snug text-secondary"
+					>
 						{{ card.record.description }}
 					</span>
-					<span class="flex flex-wrap items-center gap-3 text-xs text-secondary">
-						<span v-if="card.version">{{ card.version }}</span>
-						<span v-if="card.server" class="flex items-center gap-1.5">
-							{{ card.server }}
-							<span
-								v-if="card.presence"
-								class="inline-flex items-center gap-1"
-								:class="card.presence.offline ? 'text-red' : 'text-green'"
-							>
-								<span v-if="!card.presence.offline" class="size-1.5 rounded-full bg-green" />
-								{{ card.presence.text }}
-							</span>
-						</span>
-						<span v-if="card.pending" class="text-brand">
-							{{ formatMessage(messages.notDownloaded) }}
-						</span>
-					</span>
 				</div>
 
-				<div class="flex shrink-0 items-center gap-2">
-					<ButtonStyled v-if="!card.record.required && card.record.instance_id && !card.pending">
+				<div class="flex items-center gap-1">
+					<ButtonStyled
+						v-if="!card.record.required && card.record.instance_id && !card.pending"
+						type="transparent"
+						circular
+					>
 						<button
 							v-tooltip="formatMessage(messages.removeHint)"
 							:disabled="isBusy || removingId !== null"
 							@click="removeOptional(card.record)"
 						>
 							<TrashIcon />
-							{{ formatMessage(messages.remove) }}
 						</button>
 					</ButtonStyled>
 
-					<ButtonStyled color="brand" class="shrink-0">
+					<ButtonStyled :color="card.pending ? 'standard' : 'brand'" circular>
 						<button
+							v-tooltip="
+								launchingId === card.record.instance_id
+									? formatMessage(messages.starting)
+									: card.pending
+										? formatMessage(messages.playDownloads)
+										: formatMessage(messages.play)
+							"
 							:disabled="isBusy || launchingId !== null || removingId !== null"
 							@click="play(card.record)"
 						>
-							{{
-								launchingId === card.record.instance_id
-									? formatMessage(messages.starting)
-									: formatMessage(messages.play)
-							}}
+							<DownloadIcon v-if="card.pending" />
+							<PlayIcon v-else class="translate-x-[1px]" />
 						</button>
 					</ButtonStyled>
 				</div>
-			</article>
+
+				<div
+					class="col-span-3 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-secondary"
+				>
+					<span v-if="card.version" class="truncate">{{ card.version }}</span>
+					<span v-if="card.server" class="flex min-w-0 items-center gap-1">
+						<ServerIcon class="size-3 shrink-0" />
+						<span class="truncate">{{ card.server }}</span>
+						<span
+							v-if="card.presence"
+							class="inline-flex shrink-0 items-center gap-1"
+							:class="card.presence.offline ? 'text-red' : 'text-green'"
+						>
+							<span v-if="!card.presence.offline" class="size-1.5 rounded-full bg-green" />
+							{{ card.presence.text }}
+						</span>
+					</span>
+					<span v-if="card.pending" class="text-brand">
+						{{ formatMessage(messages.notDownloaded) }}
+					</span>
+				</div>
+			</div>
 		</div>
 	</section>
 
 	<section
 		v-else-if="manifestUrl === ''"
-		class="mb-6 rounded-xl border border-divider bg-surface-2 p-5"
+		class="rounded-[var(--radius-lg)] bg-bg-raised p-4 card-shadow"
 	>
 		<p class="m-0 text-sm text-secondary">{{ formatMessage(messages.unconfigured) }}</p>
 	</section>

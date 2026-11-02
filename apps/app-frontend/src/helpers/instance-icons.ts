@@ -390,6 +390,16 @@ export const modrinth3DInstanceIcons: BuiltInInstanceIcon[] = [
 
 const builtInInstanceIconMap = new Map(builtInInstanceIcons.map((icon) => [icon.id, icon]))
 
+/**
+ * Artwork for an entry that publishes no icon of its own.
+ *
+ * The grass block is the icon the launcher already uses for a plain Minecraft
+ * instance, so an instance without artwork still looks like an instance instead
+ * of a letter placeholder.
+ */
+export const defaultInstanceIconUrl: string | null =
+	builtInInstanceIconMap.get('grass-block')?.url ?? null
+
 const loaderIconIds: Record<string, string> = {
 	vanilla: 'grass-block',
 	fabric: 'fabric',

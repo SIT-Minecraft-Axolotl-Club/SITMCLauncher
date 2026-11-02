@@ -70,17 +70,17 @@ ${StrLoc}
 !define ESTIMATEDSIZE "{{estimated_size}}"
 !define STARTMENUFOLDER "{{start_menu_folder}}"
 
-!define AXL_BACKGROUND 16181C
-!define AXL_SURFACE 1D1F23
-!define AXL_RAISED 27292E
-!define AXL_CONTROL 34363C
-!define AXL_BORDER 42444A
+!define AXL_BACKGROUND 121212
+!define AXL_SURFACE 1A1A1A
+!define AXL_RAISED 2B2B2B
+!define AXL_CONTROL 3A3A3A
+!define AXL_BORDER 454545
 !define AXL_TEXT FFFFFF
-!define AXL_TEXT_MUTED B0BAC5
-!define AXL_TEXT_SECONDARY 96A2B0
-!define AXL_BRAND F472B6
-!define AXL_SUCCESS 1BD96A
-!define AXL_ERROR FF496E
+!define AXL_TEXT_MUTED A1A1AA
+!define AXL_TEXT_SECONDARY 7C7C85
+!define AXL_BRAND FFB7C5
+!define AXL_SUCCESS 77B978
+!define AXL_ERROR F37262
 
 !define MUI_BGCOLOR ${AXL_BACKGROUND}
 !define MUI_TEXTCOLOR ${AXL_TEXT}
@@ -698,7 +698,7 @@ Function PageLeaveOptions
     ${NSD_SetText} $OptionsError "$(axlResourceDirectoryNotWritable)"
     Abort
   ${EndIf}
-  FileWrite $0 "Axolotl Launcher"
+  FileWrite $0 "SITMC Launcher"
   FileClose $0
   Delete "$ResourceDir\.axolotl-write-test"
 FunctionEnd
@@ -842,7 +842,7 @@ FunctionEnd
   !include "{{this}}"
 {{/each}}
 
-LangString axlWelcomeTitle ${LANG_ENGLISH} "Install Axolotl Launcher"
+LangString axlWelcomeTitle ${LANG_ENGLISH} "Install SITMC Launcher"
 LangString axlWelcomeText ${LANG_ENGLISH} "A modern home for your Minecraft instances.$\r$\n$\r$\nVersion ${VERSION} · 64-bit · Current user"
 LangString axlStart ${LANG_ENGLISH} "Start"
 LangString axlOptionsTitle ${LANG_ENGLISH} "Installation settings"
@@ -852,7 +852,7 @@ LangString axlResourceDirectoryDescription ${LANG_ENGLISH} "Stores game instance
 LangString axlBrowse ${LANG_ENGLISH} "Browse..."
 LangString axlSelectInstallDirectory ${LANG_ENGLISH} "Select the program installation location"
 LangString axlSelectResourceDirectory ${LANG_ENGLISH} "Select the application directory"
-LangString axlExistingDirectoryNotice ${LANG_ENGLISH} "This directory already contains files. Axolotl will keep them."
+LangString axlExistingDirectoryNotice ${LANG_ENGLISH} "This directory already contains files. SITMC will keep them."
 LangString axlExistingInstallDirectoryPreserved ${LANG_ENGLISH} "Your existing application directory will be preserved. You can change it later in Settings > Resource management."
 LangString axlInstallButton ${LANG_ENGLISH} "Install"
 LangString axlBack ${LANG_ENGLISH} "Back"
@@ -860,12 +860,12 @@ LangString axlInstallDirectoryInvalid ${LANG_ENGLISH} "Choose an absolute progra
 LangString axlResourceDirectoryAbsolute ${LANG_ENGLISH} "Choose an absolute application directory."
 LangString axlResourceDirectoryRoot ${LANG_ENGLISH} "The root of a drive or network share cannot be used as the application directory."
 LangString axlResourceDirectoryInsideInstall ${LANG_ENGLISH} "The application directory must be separate from the program installation location."
-LangString axlResourceDirectoryNotWritable ${LANG_ENGLISH} "Axolotl cannot write to this application directory. Choose another location or change its permissions."
-LangString axlFinishTitle ${LANG_ENGLISH} "Axolotl Launcher is installed"
+LangString axlResourceDirectoryNotWritable ${LANG_ENGLISH} "SITMC cannot write to this application directory. Choose another location or change its permissions."
+LangString axlFinishTitle ${LANG_ENGLISH} "SITMC Launcher is installed"
 LangString axlFinishText ${LANG_ENGLISH} "Everything is ready. Your application directory is:$\r$\n$ResourceDir"
 LangString axlFinishButton ${LANG_ENGLISH} "Finish"
 
-LangString axlWelcomeTitle ${LANG_SIMPCHINESE} "安装 Axolotl Launcher"
+LangString axlWelcomeTitle ${LANG_SIMPCHINESE} "安装 SITMC Launcher"
 LangString axlWelcomeText ${LANG_SIMPCHINESE} "为你的 Minecraft 实例准备的现代化启动器。$\r$\n$\r$\n版本 ${VERSION} · 64 位 · 当前用户"
 LangString axlStart ${LANG_SIMPCHINESE} "开始"
 LangString axlOptionsTitle ${LANG_SIMPCHINESE} "安装设置"
@@ -875,7 +875,7 @@ LangString axlResourceDirectoryDescription ${LANG_SIMPCHINESE} "用于保存游�
 LangString axlBrowse ${LANG_SIMPCHINESE} "浏览..."
 LangString axlSelectInstallDirectory ${LANG_SIMPCHINESE} "选择程序安装位置"
 LangString axlSelectResourceDirectory ${LANG_SIMPCHINESE} "选择应用目录"
-LangString axlExistingDirectoryNotice ${LANG_SIMPCHINESE} "此目录中已有文件，Axolotl 会保留这些内容。"
+LangString axlExistingDirectoryNotice ${LANG_SIMPCHINESE} "此目录中已有文件，SITMC 会保留这些内容。"
 LangString axlExistingInstallDirectoryPreserved ${LANG_SIMPCHINESE} "将保留现有应用目录。之后仍可在“设置 > 资源管理”中修改。"
 LangString axlInstallButton ${LANG_SIMPCHINESE} "安装"
 LangString axlBack ${LANG_SIMPCHINESE} "上一步"
@@ -883,8 +883,8 @@ LangString axlInstallDirectoryInvalid ${LANG_SIMPCHINESE} "请选择有效的绝
 LangString axlResourceDirectoryAbsolute ${LANG_SIMPCHINESE} "请选择有效的绝对应用目录。"
 LangString axlResourceDirectoryRoot ${LANG_SIMPCHINESE} "不能将磁盘或网络共享根目录直接用作应用目录。"
 LangString axlResourceDirectoryInsideInstall ${LANG_SIMPCHINESE} "应用目录必须与程序安装位置分开。"
-LangString axlResourceDirectoryNotWritable ${LANG_SIMPCHINESE} "Axolotl 无法写入该应用目录，请更换位置或调整目录权限。"
-LangString axlFinishTitle ${LANG_SIMPCHINESE} "Axolotl Launcher 已安装"
+LangString axlResourceDirectoryNotWritable ${LANG_SIMPCHINESE} "SITMC 无法写入该应用目录，请更换位置或调整目录权限。"
+LangString axlFinishTitle ${LANG_SIMPCHINESE} "SITMC Launcher 已安装"
 LangString axlFinishText ${LANG_SIMPCHINESE} "一切准备就绪。当前应用目录：$\r$\n$ResourceDir"
 LangString axlFinishButton ${LANG_SIMPCHINESE} "完成"
 
@@ -981,10 +981,10 @@ Function .onInit
   ${AndIf} $PassiveMode <> 1
     InitPluginsDir
     SetOutPath "$PLUGINSDIR"
-    File "/oname=$PLUGINSDIR\AxolotlInstallerUI.exe" "${AXL_INSTALLER_UI_PATH}"
+    File "/oname=$PLUGINSDIR\SITMCInstallerUI.exe" "${AXL_INSTALLER_UI_PATH}"
     StrCpy $0 2
     ClearErrors
-    ExecWait '"$PLUGINSDIR\AxolotlInstallerUI.exe" --installer "$EXEPATH" --version "${VERSION}" --install-dir "$INSTDIR" --resource-dir "$ResourceDir" --fresh-install "$FreshInstall" --language "$LANGUAGE"' $0
+    ExecWait '"$PLUGINSDIR\SITMCInstallerUI.exe" --installer "$EXEPATH" --version "${VERSION}" --install-dir "$INSTDIR" --resource-dir "$ResourceDir" --fresh-install "$FreshInstall" --language "$LANGUAGE"' $0
     ${If} $0 <> 2
       Quit
     ${EndIf}

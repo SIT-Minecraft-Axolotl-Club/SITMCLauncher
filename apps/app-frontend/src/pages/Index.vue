@@ -262,7 +262,16 @@ onUnmounted(() => {
 		:selected-instance-id="themeStore.minimalHomeInstanceId"
 		@select="selectMinimalInstance"
 	/>
-	<ManagedInstancesPanel />
+	<!--
+		The panel sits above the dashboard grid, so it needs the same gutter the
+		dashboard gives itself; otherwise its raised background runs to the window
+		edge and reads as a different kind of surface.
+	-->
+	<div class="px-6 pt-6">
+		<div class="mx-auto w-full max-w-[96rem]">
+			<ManagedInstancesPanel />
+		</div>
+	</div>
 	<div class="min-h-full">
 		<HomeDashboard
 			v-if="!isMinimal && dashboardConfig"
