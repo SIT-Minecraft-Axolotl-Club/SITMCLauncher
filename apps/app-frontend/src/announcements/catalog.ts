@@ -28,6 +28,25 @@ export const ANNOUNCEMENT_CHANGE_TYPES: readonly AnnouncementChangeType[] = [
 
 export const launcherAnnouncements: readonly LauncherAnnouncement[] = [
 	{
+		id: 'launcher-2.2.4',
+		version: '2.2.4',
+		publishedAt: '2026-11-02',
+		title: {
+			'en-US': 'SITMC Launcher 2.2.4',
+			'zh-CN': 'SITMC 启动器 2.2.4',
+		},
+		changes: {
+			fixed: [
+				{
+					'en-US':
+						'The new installer finished copying the files but could not start the launcher afterwards, and said so on its last screen. It now starts the launcher it just installed.',
+					'zh-CN':
+						'新的安装程序在复制完文件后无法自动启动启动器，最后一屏会提示「安装完成但无法启动」。现在会自动启动它刚装好的启动器。',
+				},
+			],
+		},
+	},
+	{
 		id: 'launcher-2.2.3',
 		version: '2.2.3',
 		publishedAt: '2026-11-02',

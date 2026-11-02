@@ -33,7 +33,14 @@ use wry::{NewWindowResponse, WebView, WebViewBuilder, http::Request};
 
 const HTML: &str = include_str!("installer.html");
 const LOGO: &[u8] = include_bytes!("../../app/icons/128x128.png");
-const MAIN_BINARY_NAME: &str = "Axolotl Launcher.exe";
+
+/// Executable the installer starts once the files are in place.
+///
+/// Named after the product, but looked up rather than trusted: a build that
+/// renames its binary would otherwise finish the install and then fail to start
+/// anything, which is exactly what a player would read as "installed but
+/// broken".
+const MAIN_BINARY_NAME: &str = "SITMC Launcher.exe";
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -147,7 +154,7 @@ pub fn run() -> Result<(), String> {
     let arguments = parse_arguments()?;
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
     let window = WindowBuilder::new()
-        .with_title("Axolotl Launcher")
+        .with_title("SITMC Launcher Setup")
         .with_inner_size(LogicalSize::new(940.0, 620.0))
         .with_min_inner_size(LogicalSize::new(940.0, 620.0))
         .with_max_inner_size(LogicalSize::new(940.0, 620.0))
@@ -461,10 +468,52 @@ fn dialog_initial_location(path: &Path) -> Option<PathBuf> {
 }
 
 fn launch_main_process(install_dir: &Path) -> Result<(), String> {
-    Command::new(install_dir.join(MAIN_BINARY_NAME))
+    Command::new(main_executable(install_dir)?)
         .spawn()
         .map(|_| ())
         .map_err(|error| error.to_string())
+}
+
+/// The launcher's executable inside an installed directory.
+///
+/// The expected name is preferred, but any executable that is not the
+/// uninstaller will do: the name follows the product, and a stale constant here
+/// would leave every install reporting success while nothing starts.
+fn main_executable(install_dir: &Path) -> Result<PathBuf, String> {
+    let expected = install_dir.join(MAIN_BINARY_NAME);
+    if expected.is_file() {
+        return Ok(expected);
+    }
+
+    let entries = fs::read_dir(install_dir).map_err(|error| {
+        format!(
+            "Could not read the installation directory {}: {error}",
+            install_dir.display()
+        )
+    })?;
+
+    let mut candidates: Vec<PathBuf> = entries
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.is_file()
+                && path
+                    .extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+                && !path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .is_some_and(|name| name.eq_ignore_ascii_case("uninstall.exe"))
+        })
+        .collect();
+    candidates.sort();
+
+    candidates.into_iter().next().ok_or_else(|| {
+        format!(
+            "No launcher executable was found in {}",
+            install_dir.display()
+        )
+    })
 }
 
 fn start_install(
