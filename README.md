@@ -1,107 +1,99 @@
 <div align="center">
-  <img src="./apps/app/icons/128x128.png" width="128" height="128" alt="Axolotl Launcher Logo" />
-  <h1>Axolotl Launcher</h1>
-  <p><strong>次世代 Minecraft 桌面客户端，全能、美观、全平台覆盖。</strong></p>
+  <img src="./apps/app/icons/128x128.png" width="128" height="128" alt="SITMC 启动器" />
+  <h1>SITMC 启动器</h1>
+  <p><strong>上海应用技术大学 Minecraft 六角恐龙社的官方启动器</strong></p>
 
   <p>
-    <a href="https://github.com/Mystic-Stars/Axolotl/actions">
-      <img src="https://img.shields.io/github/actions/workflow/status/Mystic-Stars/Axolotl/axolotl-ci.yml?style=for-the-badge&logo=github" alt="Desktop CI" />
-    </a>
-    <a href="https://github.com/Mystic-Stars/Axolotl/releases">
-      <img src="https://img.shields.io/github/downloads/Mystic-Stars/Axolotl/total?style=for-the-badge&logo=github" alt="Downloads" />
-    </a>
-    <a href="https://github.com/Mystic-Stars/Axolotl/stargazers">
-      <img src="https://img.shields.io/github/stars/Mystic-Stars/Axolotl?style=for-the-badge&logo=github&color=ffb800" alt="Stars" />
-    </a>
-    <a href="COPYING.md">
-      <img src="https://img.shields.io/badge/License-GPL_3.0-blue.svg?style=for-the-badge" alt="License" />
-    </a>
-  </p>
-
-  <p>
-    <a href="https://www.axlmc.org">官方网站</a> ｜
-    <a href="https://github.com/Mystic-Stars/Axolotl/releases/latest">下载最新版</a> ｜
-    <a href="CONTRIBUTING.md">参与贡献</a>
-    ｜ <a href="CODE_OF_CONDUCT.md">行为准则</a>
+    <a href="https://www.sitmc.club">官方网站</a> ｜
+    <a href="https://cloud.sitmc.club/s/7kaFe">下载启动器</a> ｜
+    <a href="https://skin.sitmc.club">用户中心</a> ｜
+    <a href="https://www.sitmc.club/guide">游玩指南</a> ｜
+    <a href="https://qm.qq.com/q/YTb3tqvyYE">加入交流群</a>
   </p>
 </div>
 
-<details open>
-<summary><strong>赞助与合作</strong></summary>
+---
 
-感谢以下赞助商与合作伙伴对 Axolotl Launcher 的支持。
+**SITMC 启动器**（SITMCL）是社团基于开源项目 [Modrinth App](https://github.com/modrinth/code) 二次开发的 Minecraft Java 版启动器，免费、开源、无广告。它把「注册账号 → 装好整合包 → 进服」压缩成一条流程：登录社团账号后，社团服务器发布的实例会自动安装并在版本更新时自动同步，不需要玩家自己去翻整合包、对齐版本。
 
-<table>
-  <tr>
-    <td><img src="./.github/assets/codeflow-logo.png" width="72" alt="Codeflow Logo" /></td>
-    <td><strong>Codeflow</strong><br>更稳、更省地调用顶级 AI 模型<br>原生协议转发 · 无需海外网络 · 支付宝即充即用</td>
-    <td><a href="https://codeflow.asia/register?invite=4UHP2KYH">访问 Codeflow</a></td>
-  </tr>
-</table>
+目前只提供 **Windows 10 / 11（x64）** 版本。
 
-<a href="https://www.netlify.com">
-  <img src="https://www.netlify.com/assets/badges/netlify-badge-color-accent.svg" alt="Deploys by Netlify" />
-</a>
+## 快速开始
 
-- [在爱发电支持 Axolotl Launcher](https://ifdian.net/a/Mystic-Stars) — 你的支持将帮助项目持续维护与改进
+1. **下载**：[点此下载 SITMC 启动器](https://cloud.sitmc.club/s/7kaFe)
+2. **安装**：双击运行安装包。Windows Defender 可能提示「已保护你的电脑」，点「更多信息」→「仍要运行」即可。
+3. **登录**：启动后点「使用 SIT-Minecraft 账户登录」，浏览器会打开授权页面。校内同学可直接用 **Eduroam**（学号 + 信息门户 OA 密码）登录。
+4. **创建角色**：首次登录会提示创建角色，这里填的就是你的游戏 ID（英文、数字、下划线）。
+5. **进服**：在首页选择要玩的实例，点「Play」。缺失的游戏文件和整合包会自动下载。
 
-</details>
+还没有账号？请先阅读[隐私政策](https://www.sitmc.club/privacy)，再到[用户中心](https://skin.sitmc.club)注册。
+校外玩家可以通过 [MUA 用户中心](https://skin.mualliance.ltd/) 使用教育邮箱等方式完成认证。
+
+## 它做了什么
+
+| 能力 | 说明 |
+| --- | --- |
+| **社团实例托管** | 实例由服务器统一发布，包含整合包、游戏版本与加载器。点一下就能装好，服务器更新版本时客户端会跟着更新，不用手动重装。 |
+| **社团账号登录** | 内置社团用户中心登录（浏览器授权），支持 Eduroam / OA 认证；登录状态会自动续期，长时间挂机也不会掉线。 |
+| **服务器在线人数** | 首页的每个实例会显示所连服务器的实时在线人数（如「在线 3/2026」），每分钟刷新，不用进游戏也能看服务器是否有人。 |
+| **皮肤与披风** | 内置社团皮肤站，可浏览、上传、切换皮肤与披风，游戏内同步生效。 |
+| **友站实例** | 可以在「友站」页浏览兄弟社团发布的实例，同样支持一键安装与启动。 |
+| **内置工具** | 种子地图、投影工坊、资源包与光影管理、存档管理、日志分析等。 |
+
+## 社团服务器
+
+| 服务器 | 地址 | 说明 |
+| --- | --- | --- |
+| 生存世界 | `play.sitmc.club` | 社团主服务器 |
+| 像素上应 | `creative.sitmc.club` | 建筑与创作服 |
+| 跑酷世界 | `game.sitmc.club` | 小游戏与跑酷 |
+| 模组世界 | `mod.sitmc.club` | 模组服 |
+| Bingo | `bingo.sitmc.club` | 活动玩法 |
+
+服务器状态与在线人数也可以在[像素上应在线地图](https://www.sitmc.club/pixelsit)查看。
+
+## 常见问题
+
+**Q：提示「Java 21 无法安装」或安装实例失败？**
+启动器会自动下载 Minecraft 官方 Java 运行时。这一步依赖网络，若连接 Mojang 服务器失败，它会短暂重试后回滚，避免留下装了一半的实例。换个网络环境重试即可；反复失败请把「安装报告」发到交流群。
+
+**Q：启动器会自己更新吗？**
+会。更新包使用签名校验，下载完成后自动安装，不需要手动覆盖。也可以在「设置 → 更新」里改成延迟一天获取。
+
+**Q：需要自己装 Modrinth 或改成别的账号系统吗？**
+不需要。这个版本固定连接社团账号系统，不需要也不能切换到其他认证源。
+
+**Q：macOS / Linux 能用吗？**
+目前不提供。社团服务器相关流程只在 Windows 版本上验证过。
+
+**Q：以前的「美西螈启动器」还要留着吗？**
+不需要。从旧版升级后，启动器会自动把实例、设置和账号迁移到新的数据目录，并在迁移完成后卸载旧版；旧版数据不会被删除。
+
+## 关于这个项目
+
+- 仓库：[SIT-Minecraft-Axolotl-Club/Axolotl](https://github.com/SIT-Minecraft-Axolotl-Club/Axolotl)
+- 上游项目：[Modrinth App](https://github.com/modrinth/code)、[Axolotl Launcher](https://github.com/Mystic-Stars/Axolotl)
+- 许可：[GPL-3.0](COPYING.md)
+- 反馈问题：欢迎到[交流群 623697015](https://qm.qq.com/q/YTb3tqvyYE)反馈，或提交 [Issue](https://github.com/SIT-Minecraft-Axolotl-Club/Axolotl/issues)
+- 参与开发：本地开发环境与打包发布流程见 [CONTRIBUTING.md](CONTRIBUTING.md)；社区行为规范见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+## 相关链接
+
+- 社团站点：[www.sitmc.club](https://www.sitmc.club) ｜ [近期动态](https://www.sitmc.club/news) ｜ [关于我们](https://www.sitmc.club/about)
+- 用户中心：[skin.sitmc.club](https://skin.sitmc.club)
+- 文件云盘：[cloud.sitmc.club](https://cloud.sitmc.club)
+- 生存卫星：[survival.sitmc.club](https://survival.sitmc.club)
+- B 站：[space.bilibili.com/9888184](https://space.bilibili.com/9888184)；抖音：[社团主页](https://v.douyin.com/Yd84UYBOnes/)
+- 友情社团：[Minecraft 高校联盟](https://www.mualliance.cn/)、[燕山大学 Minecraft 社](https://ysumc.net/)、[上海交通大学 Minecraft 社](https://mc.sjtu.cn/)、[同济大学 Minecraft 社](https://www.tongji-mc.cn/)、[浙江大学 Minecraft 社](https://www.mczju.com/)、[西南科技大学 Minecraft 社](https://www.swustmc.cn/)、[西安邮电大学邮立方](https://cop.cooo.site/)
 
 ---
 
-**Axolotl Launcher（美西螈启动器）** 是一款免费、开源、跨平台的 Minecraft Java 版第三方启动器，支持在一个客户端中搜索、安装和更新来自 Modrinth 与 CurseForge 的模组、整合包、资源包和光影，并提供实例管理、多种账户认证、个性化外观与 Axolotl 实验室工具。
+<div align="center">
 
-本项目基于 [Modrinth App](https://github.com/modrinth/code) 构建，移除了不适用于本项目的商业化模块，专注于提供纯净、无广告的桌面启动体验。
+上海应用技术大学 Minecraft 六角恐龙社 版权所有  
+Copyright 2023-2026 SIT-Minecraft
 
-本项目与客户端项目 Axolotl Client 无任何关联。
+本启动器是调用 Modrinth 公开 API 的独立客户端，与 Rinth, Inc. 无任何关联，也与客户端项目 Axolotl Client 无关。  
+"Minecraft" 以及 "我的世界" 为美国微软公司的商标，本项目与微软公司没有从属关系。
 
-_(注：本项目是调用 Modrinth 公开 API 的独立客户端，与 Rinth, Inc. 无任何关联。)_
-
-## 核心优势
-
-- **真跨平台体验**：告别繁琐的环境配置，原生支持 Windows、macOS（完美兼容 Intel 与 Apple Silicon）及各类主流 Linux 发行版。
-- **现代化内容生态**：集成 Modrinth 和 CurseForge，可在启动器中一键浏览。游戏实例、整合包、模组、资源包及光影均可一键安装与升级，彻底告别手动管理依赖的痛苦。
-- **高度定制化**：无论是主题色调、背景图片，还是离线皮肤，核心功能与视觉展现均由你自由支配。
-- **All in one 全新体验**：启动器内置 “实验室” 功能，囊括种子地图、投影工坊等海量使用工具，带来全新原生轮椅体验。
-
-## 下载与安装
-
-请前往 [GitHub Releases](https://github.com/Mystic-Stars/Axolotl/releases/latest) 下载适合你操作系统的最新安装包。
-已安装的用户每次均可通过内置的 Tauri 签名校验机制，自动在后台完成更新，无需手动下载安装更新。
-
-| 系统平台                | 推荐下载文件                              |
-| ----------------------- | ----------------------------------------- |
-| **Windows** (10/11 x64) | 下载 `.exe` (NSIS) 安装程序               |
-| **macOS**               | 下载 `通用 .dmg` 镜像文件                 |
-| **Linux** (x64)         | 提供 `.AppImage`，`.deb`，`.rpm` 多种格式 |
-
-<details>
-<summary><b>Linux 包管理器快捷安装指令</b></summary>
-<br>
-
-**Arch Linux (AUR)**：
-
-```bash
-# 源码构建版
-yay -S axolotl-launcher
-
-# 预编译二进制版
-yay -S axolotl-launcher-bin
-```
-
-**Debian / Ubuntu (APT)**：
-
-```bash
-curl -fsSL https://ppa.axlmc.org/setup.sh | sudo bash
-sudo apt install axolotl-launcher
-```
-
-</details>
-
-## 参与项目开发
-
-Axolotl Launcher 的进步离不开社区的反馈与贡献。
-如果遇到 Bug 或有新的功能点子，欢迎提交 Issue。如需搭建本地开发环境或查阅打包发布规范，请阅读详细的 [贡献指南 (CONTRIBUTING.md)](CONTRIBUTING.md)。
-参与社区和贡献代码前，也请先阅读[行为准则 (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md)。
-
----
+</div>
