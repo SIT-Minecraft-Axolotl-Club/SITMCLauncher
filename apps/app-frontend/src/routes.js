@@ -1,11 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 /**
- * Configures application routing. Add page to pages/index and then add to route table here.
+ * Configures application routing with lazy page imports.
  *
  * This launcher only serves the login, update, and launch surfaces: content
  * browsing, user-created instances, and the Lab tools are unrouted on purpose.
- * Their pages stay on disk so they can be re-registered later.
  */
 export default new createRouter({
 	history: createWebHistory(),

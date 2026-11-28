@@ -57,7 +57,6 @@ const messages = defineMessages({
 const {
 	state,
 	error,
-	records,
 	activeRecords,
 	optionalActionsByServerId,
 	specsById,
@@ -211,15 +210,9 @@ async function play(record: ManagedInstanceRecord) {
 		return
 	}
 
-	await installOptional(action)
-	await refresh()
-
-	const updated = records.value.find(
-		(candidate) => candidate.server_instance_id === record.server_instance_id,
-	)
-	if (!updated?.instance_id) return
-
-	await launch(updated.instance_id, record.server_instance_id)
+	const instanceId = await installOptional(record.server_instance_id)
+	if (!instanceId) return
+	await launch(instanceId, record.server_instance_id)
 }
 
 /** Frees an optional instance. The record stays, so it can be downloaded again. */

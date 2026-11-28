@@ -305,19 +305,6 @@ export const onboardingMessages = defineMessages({
 		id: 'app.onboarding.action.click-lab',
 		defaultMessage: 'Click Lab to continue',
 	},
-	labToolsTitle: {
-		id: 'app.onboarding.lab-tools.title',
-		defaultMessage: 'Local tools for Minecraft',
-	},
-	labToolsDescription: {
-		id: 'app.onboarding.lab-tools.description',
-		defaultMessage:
-			'Create formatted text and recipe data packs, explore Java worlds, and inspect schematic builds without leaving the launcher.',
-	},
-	openGradientText: {
-		id: 'app.onboarding.action.open-gradient-text',
-		defaultMessage: 'Open Gradient text generator to continue',
-	},
 	labEditorTitle: {
 		id: 'app.onboarding.lab-editor.title',
 		defaultMessage: 'Build and copy in one place',

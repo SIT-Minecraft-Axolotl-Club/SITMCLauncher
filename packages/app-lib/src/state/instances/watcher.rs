@@ -6,7 +6,9 @@ use crate::state::{
 };
 use crate::worlds::WorldType;
 use notify::{RecommendedWatcher, RecursiveMode};
-use notify_debouncer_mini::{DebounceEventResult, Debouncer, new_debouncer};
+use notify_debouncer_mini::{
+    DebounceEventResult, DebouncedEventKind, Debouncer, new_debouncer,
+};
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -80,6 +82,7 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                     let manual_import_directory =
                         event_manual_import_directory.read().await.clone();
                     let mut visited_instances = Vec::new();
+                    let mut crashed_instances = HashSet::new();
                     let mut synced_option_files =
                         HashMap::<String, HashSet<String>>::new();
                     let mut scan_manual_downloads = false;
@@ -186,7 +189,13 @@ pub async fn init_watcher() -> crate::Result<FileWatcher> {
                                     .as_ref()
                                     .is_some_and(|x| *x == "log");
                             if is_crash_report || is_jvm_crash {
-                                crash_task(instance_id);
+                                if e.kind == DebouncedEventKind::Any
+                                    && e.path.is_file()
+                                    && crashed_instances
+                                        .insert(instance_id.clone())
+                                {
+                                    crash_task(instance_id);
+                                }
                             } else if !visited_instances.contains(&instance_id)
                             {
                                 let event = if first_file_name

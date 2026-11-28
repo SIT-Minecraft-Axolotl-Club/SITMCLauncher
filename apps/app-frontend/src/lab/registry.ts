@@ -2,7 +2,6 @@ import {
 	BlocksIcon,
 	BoxIcon,
 	LanguagesIcon,
-	PaletteIcon,
 	PencilIcon,
 	WorldIcon,
 } from '@modrinth/assets'
@@ -25,14 +24,6 @@ export const labTools: readonly LabToolDefinition[] = [
 		icon: PencilIcon,
 		title: 'Skin editor',
 		description: 'Create and edit Minecraft player skins locally.',
-	},
-	{
-		id: 'gradient-text',
-		category: 'creation',
-		route: '/lab/gradient-text',
-		icon: PaletteIcon,
-		title: 'Gradient text generator',
-		description: 'Create Minecraft-ready gradient text without a browser.',
 	},
 	{
 		id: 'seed-map',
@@ -67,7 +58,3 @@ export const labTools: readonly LabToolDefinition[] = [
 		description: 'Create Minecraft Java data pack recipes from local item and tag data.',
 	},
 ]
-
-export function getLabTool(id: string): LabToolDefinition | undefined {
-	return labTools.find((tool) => tool.id === id)
-}

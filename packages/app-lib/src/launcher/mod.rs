@@ -30,7 +30,7 @@ use crate::state::{
 };
 use crate::util::io;
 use crate::util::rpc::RpcServerBuilder;
-use crate::{State, get_resource_file, process};
+use crate::{State, get_resource_file};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
 use chrono::Utc;
@@ -46,16 +46,6 @@ use std::time::Instant;
 use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 use tokio_util::sync::CancellationToken;
-
-pub(crate) struct GameVersionMetadata {
-    pub world_version: Option<u32>,
-}
-
-pub(crate) async fn read_game_version_metadata_from_jar(
-    _path: &Path,
-) -> crate::Result<Option<GameVersionMetadata>> {
-    Ok(None)
-}
 
 #[cfg(target_os = "windows")]
 use winreg::{RegKey, enums::HKEY_CURRENT_USER};
@@ -1764,6 +1754,20 @@ pub async fn install_minecraft_for_instance_id_with_local_source(
 pub async fn read_protocol_version_from_jar(
     path: PathBuf,
 ) -> crate::Result<Option<u32>> {
+    Ok(read_game_version_metadata_from_jar(&path)
+        .await?
+        .and_then(|metadata| metadata.protocol_version))
+}
+
+#[derive(Deserialize)]
+pub(crate) struct GameVersionMetadata {
+    protocol_version: Option<u32>,
+    pub world_version: Option<u32>,
+}
+
+pub(crate) async fn read_game_version_metadata_from_jar(
+    path: &Path,
+) -> crate::Result<Option<GameVersionMetadata>> {
     let zip = async_zip::tokio::read::fs::ZipFileReader::new(path).await?;
     let Some(entry_index) = zip
         .file()
@@ -1774,19 +1778,43 @@ pub async fn read_protocol_version_from_jar(
         return Ok(None);
     };
 
-    #[derive(Deserialize, Debug)]
-    struct VersionData {
-        protocol_version: Option<u32>,
-    }
-
-    let mut data = vec![];
+    let mut data = Vec::new();
     zip.reader_with_entry(entry_index)
         .await?
         .read_to_end_checked(&mut data)
         .await?;
-    let data: VersionData = serde_json::from_slice(&data)?;
+    Ok(Some(serde_json::from_slice(&data)?))
+}
 
-    Ok(data.protocol_version)
+#[cfg(test)]
+mod game_version_metadata_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn reads_world_and_protocol_versions_from_the_client_jar() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("client.jar");
+        let mut jar =
+            zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
+        jar.start_file("version.json", zip::write::SimpleFileOptions::default())
+            .unwrap();
+        std::io::Write::write_all(
+            &mut jar,
+            br#"{"world_version": 3955, "protocol_version": 767}"#,
+        )
+        .unwrap();
+        jar.finish().unwrap();
+
+        let metadata = read_game_version_metadata_from_jar(&path)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(metadata.world_version, Some(3955));
+        assert_eq!(
+            read_protocol_version_from_jar(path).await.unwrap(),
+            Some(767)
+        );
+    }
 }
 
 /// Selects a Java runtime from the HMCL private settings of a directly
@@ -2257,16 +2285,16 @@ pub async fn launch_minecraft(
     } else {
         let key = required_java_major(&version_info);
 
-        if let Some(java) = crate::api::jre::find_java_for_version(key).await? {
-            java
-        } else if let Some(java) =
+        if let Some(java) =
             crate::api::jre::find_compatible_java_for_version(key).await?
         {
-            tracing::info!(
-                version = java.version,
-                java = java.path,
-                "Using a compatible Java runtime instead of the recommended version"
-            );
+            if java.parsed_version != key {
+                tracing::info!(
+                    version = java.version,
+                    java = java.path,
+                    "Using a compatible Java runtime instead of the recommended version"
+                );
+            }
             java
         } else {
             // Nothing on disk can run it, so the runtime Mojang publishes for
@@ -2285,9 +2313,6 @@ pub async fn launch_minecraft(
         }
     };
 
-    // Test jre version
-    let java_version =
-        crate::api::jre::check_jre(java_version.path.clone().into()).await?;
     validate_loader_java_version(&version_info, &java_version)?;
 
     // Runtime-verify and fall back for GC arguments against the *actual* JVM
@@ -2446,17 +2471,6 @@ pub async fn launch_minecraft(
     };
 
     let env_args = Vec::from(env_args);
-
-    // Check if instance has a running process, and reject running the command if it does
-    // Done late so a quick double call doesn't launch two instances
-    let existing_processes = process::get_by_instance_id(&instance.id).await?;
-    if let Some(process) = existing_processes.first() {
-        return Err(crate::ErrorKind::LauncherError(format!(
-            "Instance {} is already running as process {}",
-            instance.id, process.uuid
-        ))
-        .as_error());
-    }
 
     // Ensure phase (HMCL/PCL parity): before anything reads from the linked
     // installation, complete its missing libraries, assets, and logging

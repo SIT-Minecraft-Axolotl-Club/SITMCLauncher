@@ -5,7 +5,7 @@ use crate::event::{LogEvent, LogPayload};
 use crate::util::io::IOError;
 use crate::util::rpc::RpcServer;
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use dashmap::DashMap;
+use dashmap::{DashMap, DashSet};
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use serde::Deserialize;
@@ -240,6 +240,18 @@ pub fn remove_log_buffer(instance_id: &str) {
 
 pub struct ProcessManager {
     processes: DashMap<Uuid, Process>,
+    preparing: DashSet<String>,
+}
+
+pub(crate) struct InstanceLaunchGuard<'a> {
+    preparing: &'a DashSet<String>,
+    instance_id: &'a str,
+}
+
+impl Drop for InstanceLaunchGuard<'_> {
+    fn drop(&mut self) {
+        self.preparing.remove(self.instance_id);
+    }
 }
 
 impl Default for ProcessManager {
@@ -252,7 +264,32 @@ impl ProcessManager {
     pub fn new() -> Self {
         Self {
             processes: DashMap::new(),
+            preparing: DashSet::new(),
         }
+    }
+
+    pub(crate) fn begin_instance_launch<'a>(
+        &'a self,
+        instance_id: &'a str,
+    ) -> crate::Result<InstanceLaunchGuard<'a>> {
+        if !self.preparing.insert(instance_id.to_owned()) {
+            return Err(crate::ErrorKind::LauncherError(format!(
+                "Instance {instance_id} is already preparing to launch"
+            ))
+            .as_error());
+        }
+
+        let guard = InstanceLaunchGuard {
+            preparing: &self.preparing,
+            instance_id,
+        };
+        if self.has_instance_process(instance_id) {
+            return Err(crate::ErrorKind::LauncherError(format!(
+                "Instance {instance_id} is already running"
+            ))
+            .as_error());
+        }
+        Ok(guard)
     }
 
     pub fn has_instance_process(&self, instance_id: &str) -> bool {
@@ -281,34 +318,6 @@ impl ProcessManager {
             &RpcServer,
         ) -> crate::Result<()>,
     ) -> crate::Result<ProcessMetadata> {
-        mc_command.stdout(std::process::Stdio::piped());
-        mc_command.stderr(std::process::Stdio::piped());
-        mc_command.stdin(std::process::Stdio::piped());
-
-        let mut mc_proc = mc_command.spawn().map_err(IOError::from)?;
-
-        let stdout = mc_proc.stdout.take();
-        let stderr = mc_proc.stderr.take();
-
-        let mut process = Process {
-            metadata: ProcessMetadata {
-                uuid: Uuid::new_v4(),
-                pid: mc_proc.id().unwrap_or_default(),
-                maximize_window,
-                start_time: Utc::now(),
-                instance_id: instance_id.to_string(),
-                instance_path: instance_path.to_string(),
-                instance_name: instance_name.to_string(),
-            },
-            child: mc_proc,
-            manually_killed: false,
-            output_tasks: Vec::new(),
-            rpc_server,
-            _main_class_keep_alive: main_class_keep_alive,
-        };
-
-        let metadata = process.metadata.clone();
-
         if !logs_folder.exists() {
             tokio::fs::create_dir_all(&logs_folder)
                 .await
@@ -339,6 +348,50 @@ impl ProcessManager {
                 .map_err(|e| IOError::with_path(e, &log_path))?;
             writeln!(log_file).map_err(|e| IOError::with_path(e, &log_path))?;
         }
+
+        let crash_reports_before = match crate::State::get().await {
+            Ok(state) => Some(
+                snapshot_crash_reports(
+                    &state.directories.game_crash_reports_dir(&game_dir),
+                )
+                .await,
+            ),
+            Err(error) => {
+                tracing::warn!(
+                    "Failed to snapshot crash reports before launch: {error}"
+                );
+                None
+            }
+        };
+
+        mc_command.stdout(std::process::Stdio::piped());
+        mc_command.stderr(std::process::Stdio::piped());
+        mc_command.stdin(std::process::Stdio::piped());
+
+        let mut mc_proc = mc_command.spawn().map_err(IOError::from)?;
+
+        let stdout = mc_proc.stdout.take();
+        let stderr = mc_proc.stderr.take();
+
+        let mut process = Process {
+            metadata: ProcessMetadata {
+                uuid: Uuid::new_v4(),
+                pid: mc_proc.id().unwrap_or_default(),
+                maximize_window,
+                start_time: Utc::now(),
+                instance_id: instance_id.to_string(),
+                instance_path: instance_path.to_string(),
+                instance_name: instance_name.to_string(),
+            },
+            child: mc_proc,
+            initializing: true,
+            manually_killed: false,
+            output_tasks: Vec::new(),
+            rpc_server,
+            _main_class_keep_alive: main_class_keep_alive,
+        };
+
+        let metadata = process.metadata.clone();
 
         if let Some(stdout) = stdout {
             let log_path_clone = log_path.clone();
@@ -427,22 +480,23 @@ impl ProcessManager {
             return Err(error);
         }
 
-        let crash_reports_before = match crate::State::get().await {
-            Ok(state) => Some(
-                snapshot_crash_reports(
-                    &state.directories.game_crash_reports_dir(&game_dir),
-                )
-                .await,
-            ),
-            Err(error) => {
-                tracing::warn!(
-                    "Failed to snapshot crash reports before launch: {error}"
-                );
-                None
-            }
-        };
-
+        process.initializing = false;
         self.processes.insert(process.metadata.uuid, process);
+
+        if let Err(error) = emit_process(
+            instance_id,
+            metadata.uuid,
+            metadata.pid,
+            metadata.maximize_window,
+            Some(launch_preparation_timeout),
+            ProcessPayloadType::Launched,
+            "Launched Minecraft",
+            None,
+        )
+        .await
+        {
+            tracing::warn!(%error, "Failed to emit Minecraft launch event");
+        }
 
         tokio::spawn(Process::sequential_process_manager(
             instance_id.to_string(),
@@ -455,18 +509,6 @@ impl ProcessManager {
             metadata.maximize_window,
             crash_reports_before,
         ));
-
-        emit_process(
-            instance_id,
-            metadata.uuid,
-            metadata.pid,
-            metadata.maximize_window,
-            Some(launch_preparation_timeout),
-            ProcessPayloadType::Launched,
-            "Launched Minecraft",
-            None,
-        )
-        .await?;
 
         Ok(metadata)
     }
@@ -542,10 +584,19 @@ pub struct ProcessMetadata {
 struct Process {
     metadata: ProcessMetadata,
     child: Child,
+    initializing: bool,
     manually_killed: bool,
     output_tasks: Vec<tokio::task::JoinHandle<()>>,
     _main_class_keep_alive: TempDir,
     rpc_server: RpcServer,
+}
+
+impl Drop for Process {
+    fn drop(&mut self) {
+        if self.initializing {
+            let _ = self.child.start_kill();
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Clone)]
@@ -1177,6 +1228,14 @@ impl Process {
         }
 
         let manually_killed = state.process_manager.was_manually_killed(uuid);
+        tracing::info!(
+            instance = %instance_id,
+            process = %uuid,
+            pid,
+            %mc_exit_status,
+            manually_killed,
+            "Minecraft process exited"
+        );
         if let Some(mut process) = state.process_manager.remove(uuid) {
             for output_task in process.output_tasks.drain(..) {
                 if let Err(error) = output_task.await {
@@ -1315,6 +1374,26 @@ impl Process {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod launch_reservation_tests {
+    use super::ProcessManager;
+
+    #[test]
+    fn a_preparing_instance_cannot_be_launched_twice() {
+        let manager = ProcessManager::new();
+        let first_launch = manager.begin_instance_launch("first").unwrap();
+        let other_launch = manager.begin_instance_launch("other").unwrap();
+
+        assert!(manager.begin_instance_launch("first").is_err());
+        assert!(manager.begin_instance_launch("other").is_err());
+
+        drop(first_launch);
+        assert!(manager.begin_instance_launch("first").is_ok());
+        assert!(manager.begin_instance_launch("other").is_err());
+        drop(other_launch);
     }
 }
 

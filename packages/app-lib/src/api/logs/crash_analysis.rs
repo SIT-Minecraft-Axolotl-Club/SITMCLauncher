@@ -6,6 +6,7 @@ use std::time::{Duration, SystemTime};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 #[cfg(windows)]
 use tokio::process::Command;
 
@@ -129,6 +130,11 @@ struct Rule {
 }
 
 const RULES: &[Rule] = &[
+    Rule {
+        id: "client_shutdown_watchdog",
+        phase: 1,
+        patterns: &["java.lang.Error: Watchdog (Client shutdown from post-main)"],
+    },
     Rule {
         id: "jvm_arguments",
         phase: 1,
@@ -1323,26 +1329,38 @@ fn select_run_candidates(
 async fn read_sources(candidates: Vec<SourceCandidate>) -> Vec<SourceText> {
     let mut sources = Vec::new();
     for candidate in candidates {
-        let Ok(bytes) = tokio::fs::read(&candidate.path).await else {
-            tracing::warn!(
-                "Unable to read crash analysis source: {}",
-                candidate.path.display()
-            );
-            continue;
-        };
-        let bytes = if bytes.len() as u64 > MAX_SOURCE_BYTES {
-            &bytes[bytes.len() - MAX_SOURCE_BYTES as usize..]
-        } else {
-            &bytes
+        let bytes = match read_log_tail(&candidate.path).await {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                tracing::warn!(
+                    %error,
+                    path = %candidate.path.display(),
+                    "Unable to read crash analysis source"
+                );
+                continue;
+            }
         };
         sources.push(SourceText {
             filename: candidate.filename,
             source_type: candidate.source_type,
             modified: candidate.modified,
-            content: String::from_utf8_lossy(bytes).into_owned(),
+            content: String::from_utf8_lossy(&bytes).into_owned(),
         });
     }
     sources
+}
+
+async fn read_log_tail(path: &Path) -> std::io::Result<Vec<u8>> {
+    let mut file = tokio::fs::File::open(path).await?;
+    let length = file.metadata().await?.len();
+    let start = length.saturating_sub(MAX_SOURCE_BYTES);
+    if start > 0 {
+        file.seek(std::io::SeekFrom::Start(start)).await?;
+    }
+
+    let mut bytes = Vec::with_capacity(length.min(MAX_SOURCE_BYTES) as usize);
+    file.take(MAX_SOURCE_BYTES).read_to_end(&mut bytes).await?;
+    Ok(bytes)
 }
 
 fn analyze_sources(sources: &[SourceText]) -> Vec<CrashAnalysisFinding> {
@@ -1812,6 +1830,16 @@ mod tests {
         assert_eq!(findings[0].id, "out_of_memory");
         assert_eq!(findings[0].evidence[0].line, 2);
         assert_eq!(findings[0].evidence[0].filename, "latest.log");
+    }
+
+    #[test]
+    fn client_shutdown_watchdog_has_its_own_diagnosis() {
+        let findings = analyze_sources(&[source(
+            "crash-report.txt",
+            "java.lang.Error: Watchdog (Client shutdown from post-main)",
+        )]);
+        assert_eq!(findings[0].id, "client_shutdown_watchdog");
+        assert_eq!(findings[0].confidence, "high");
     }
 
     #[test]

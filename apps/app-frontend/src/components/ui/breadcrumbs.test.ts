@@ -54,20 +54,10 @@ test('screenshots breadcrumb resolves through the active locale', () => {
 	assert.equal(resolve(), '截图中心')
 })
 
-test('upgrade route paths, internal names, and breadcrumb depth stay unchanged', () => {
+test('unmanaged upgrade and Lab pages are not exposed as application routes', () => {
 	const routes = readFileSync(new URL('../../routes.js', import.meta.url), 'utf8')
-	assert.match(routes, /useRootContext: true,[\s\S]*?breadcrumb: \[\{ name: 'Upgrade' \}\]/)
-	assert.doesNotMatch(routes, /breadcrumb: \[\{ name: '\?Instance'[^\]]*\{ name: 'Upgrade' \}\]/)
-	for (const [path, name] of [
-		['', 'InstanceUpgrade'],
-		['compatibility', 'InstanceUpgradeCompatibility'],
-		['customize', 'InstanceUpgradeCustomize'],
-		['confirm', 'InstanceUpgradeConfirm'],
-		['progress', 'InstanceUpgradeProgress'],
-		['result', 'InstanceUpgradeResult'],
-	] as const) {
-		assert.match(routes, new RegExp(`path: '${path}',\\s+name: '${name}'`))
-	}
+	assert.doesNotMatch(routes, /name: 'InstanceUpgrade\w*'/)
+	assert.doesNotMatch(routes, /path: '\/lab(?:\/|')/)
 })
 
 test('breadcrumb component resolves Upgrade through formatMessage on each render', () => {

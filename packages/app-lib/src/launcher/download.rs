@@ -22,7 +22,7 @@ use daedalus::minecraft::{LibraryDownload, LoggingConfiguration, LoggingSide};
 use daedalus::{
     self as d,
     minecraft::{
-        Asset, AssetsIndex, Library, Version as GameVersion,
+        AssetsIndex, Library, Version as GameVersion,
         VersionInfo as GameVersionInfo,
     },
     modded::LoaderVersion,
@@ -909,33 +909,6 @@ fn missing_log_config_bytes(
     }
 }
 
-fn missing_asset_bytes(
-    st: &State,
-    with_legacy: bool,
-    index: &AssetsIndex,
-    force: bool,
-) -> u64 {
-    index
-        .objects
-        .iter()
-        .filter_map(|(name, asset)| {
-            let hash = &asset.hash;
-            let object_path = st.directories.object_dir(hash);
-            let legacy_path = st.directories.legacy_assets_dir().join(
-                name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-            );
-            let should_fetch_object =
-                force || !asset_file_is_usable(&object_path, asset.size as u64);
-            let should_fetch_legacy = (with_legacy
-                && !asset_file_is_usable(&legacy_path, asset.size as u64))
-                || force;
-
-            (should_fetch_object || should_fetch_legacy)
-                .then_some(asset.size as u64)
-        })
-        .sum()
-}
-
 fn missing_library_bytes(
     st: &State,
     libraries: &[Library],
@@ -1066,16 +1039,6 @@ pub async fn download_minecraft(
                 progress.clone(),
             )
             .await?;
-            if let Some(progress) = &progress {
-                progress
-                    .add_total(missing_asset_bytes(
-                        st,
-                        version.assets == "legacy",
-                        &assets_index,
-                        force,
-                    ))
-                    .await?;
-            }
             download_assets(
                 st,
                 local_source,
@@ -1667,29 +1630,15 @@ struct FallbackAsset {
     logical_items: u32,
 }
 
-fn build_fallback_asset(
-    st: &State,
+fn pending_legacy_asset(
+    legacy_root: Option<&Path>,
     name: &str,
-    asset: &Asset,
-) -> FallbackAsset {
-    let hash = &asset.hash;
-    let url = format!(
-        "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-        sub_hash = &hash[..2]
-    );
-    FallbackAsset {
-        name: name.to_string(),
-        hash: hash.clone(),
-        size: asset.size as u64,
-        url,
-        resource_path: st.directories.object_dir(hash),
-        legacy_resource_paths: vec![
-            st.directories.legacy_assets_dir().join(
-                name.replace('/', &String::from(std::path::MAIN_SEPARATOR)),
-            ),
-        ],
-        logical_items: 1,
-    }
+    size: u64,
+    force: bool,
+) -> Option<PathBuf> {
+    let path =
+        legacy_root?.join(name.replace('/', std::path::MAIN_SEPARATOR_STR));
+    (force || !asset_file_is_usable(&path, size)).then_some(path)
 }
 
 fn build_fallback_asset_from_batch(item: H2BatchAsset) -> FallbackAsset {
@@ -1783,52 +1732,65 @@ pub async fn download_assets(
     let mut legacy_copies = Vec::new();
     let mut fallback_assets = Vec::new();
     let mut skipped_count = 0_u64;
+    let mut pending_bytes = 0_u64;
+    let legacy_root = with_legacy.then(|| st.directories.legacy_assets_dir());
     for (name, asset) in index.objects.iter() {
         let hash = &asset.hash;
+        let size = asset.size as u64;
         let resource_path = st.directories.object_dir(hash);
-        let legacy_resource_path = st
-            .directories
-            .legacy_assets_dir()
-            .join(name.replace('/', &String::from(std::path::MAIN_SEPARATOR)));
         let should_fetch_object =
-            force || !asset_file_is_usable(&resource_path, asset.size as u64);
-        let should_fetch_legacy = (with_legacy
-            && !asset_file_is_usable(&legacy_resource_path, asset.size as u64))
-            || force;
+            force || !asset_file_is_usable(&resource_path, size);
+        let legacy_destination =
+            pending_legacy_asset(legacy_root.as_deref(), name, size, force);
+        if should_fetch_object || legacy_destination.is_some() {
+            pending_bytes += size;
+        }
 
         if should_fetch_object {
+            let url = format!(
+                "https://resources.download.minecraft.net/{sub_hash}/{hash}",
+                sub_hash = &hash[..2]
+            );
+            let item = H2BatchAsset {
+                original_url: url.clone(),
+                url,
+                destination: resource_path,
+                legacy_destinations: legacy_destination.into_iter().collect(),
+                sha1: hash.clone(),
+                size,
+                logical_items: 1,
+            };
             let local_candidate = !force
                 && super::local_artifact::candidate_is_usable(
                     local_source,
                     &local_asset_object_path(hash),
-                    Some(asset.size as u64),
+                    Some(size),
                 )
                 .await?;
             if local_candidate {
-                fallback_assets.push(build_fallback_asset(st, name, asset));
+                let mut fallback = build_fallback_asset_from_batch(item);
+                fallback.name = name.clone();
+                fallback_assets.push(fallback);
             } else {
-                let url = format!(
-                    "https://resources.download.minecraft.net/{sub_hash}/{hash}",
-                    sub_hash = &hash[..2]
-                );
-                batch_items.push(H2BatchAsset {
-                    original_url: url.clone(),
-                    url,
-                    destination: resource_path,
-                    legacy_destinations: should_fetch_legacy
-                        .then_some(legacy_resource_path)
-                        .into_iter()
-                        .collect(),
-                    sha1: hash.clone(),
-                    size: asset.size as u64,
-                    logical_items: 1,
-                });
+                batch_items.push(item);
             }
-        } else if should_fetch_legacy {
-            legacy_copies.push((name, asset));
+        } else if let Some(legacy_destination) = legacy_destination {
+            legacy_copies.push((resource_path, legacy_destination, size));
         } else {
             skipped_count += 1;
         }
+    }
+    if let Some(progress) = &progress {
+        progress.add_total(pending_bytes).await?;
+    }
+    if let Some(loading_bar) = loading_bar
+        && skipped_count > 0
+    {
+        emit_loading(
+            loading_bar,
+            per_file_fraction * skipped_count as f64,
+            None,
+        )?;
     }
 
     let mut batch_items = coalesce_batch_assets(batch_items);
@@ -1899,18 +1861,18 @@ pub async fn download_assets(
                     let progress = progress.clone();
                     let loading_bar = loading_bar.clone();
                     Box::pin(async move {
-                        for _ in 0..item.logical_items {
-                            if let Some(progress) = &progress {
-                                if let Err(error) = progress.add_bytes(item.size).await {
-                                    tracing::warn!(
-                                        error = %error,
-                                        "Failed to record batch asset bytes"
-                                    );
-                                }
+                        if let Some(progress) = &progress {
+                            let bytes = item.size * u64::from(item.logical_items);
+                            if let Err(error) = progress.add_bytes(bytes).await {
+                                tracing::warn!(
+                                    error = %error,
+                                    "Failed to record batch asset bytes"
+                                );
                             }
-                            if let Some(loading_bar) = &loading_bar {
-                                let _ = emit_loading(loading_bar, per_file_fraction, None);
-                            }
+                        }
+                        if let Some(loading_bar) = &loading_bar {
+                            let increment = per_file_fraction * f64::from(item.logical_items);
+                            let _ = emit_loading(loading_bar, increment, None);
                         }
                     })
                 }
@@ -1949,23 +1911,17 @@ pub async fn download_assets(
         .map(Ok::<_, crate::Error>)
         .try_for_each_concurrent(
             crate::util::download::task_concurrency_limit(st),
-            |(name, asset)| {
+            |(resource_path, legacy_destination, size)| {
                 let progress = progress.clone();
                 async move {
-                    let resource_path = st.directories.object_dir(&asset.hash);
-                    let legacy_resource_path =
-                        st.directories.legacy_assets_dir().join(name.replace(
-                            '/',
-                            &String::from(std::path::MAIN_SEPARATOR),
-                        ));
                     crate::util::fetch::copy(
                         &resource_path,
-                        &legacy_resource_path,
+                        &legacy_destination,
                         &st.io_semaphore,
                     )
                     .await?;
                     if let Some(progress) = &progress {
-                        progress.add_bytes(asset.size as u64).await?;
+                        progress.add_bytes(size).await?;
                     }
                     if let Some(loading_bar) = loading_bar {
                         emit_loading(loading_bar, per_file_fraction, None)?;
@@ -1998,9 +1954,7 @@ pub async fn download_assets(
                         .legacy_resource_paths
                         .iter()
                         .filter(|path| {
-                            force
-                                || (with_legacy
-                                    && !asset_file_is_usable(path, item.size))
+                            force || !asset_file_is_usable(path, item.size)
                         })
                         .collect::<Vec<_>>();
                     let should_fetch_legacy = !legacy_resource_paths.is_empty();
@@ -2051,9 +2005,12 @@ pub async fn download_assets(
                         if item.logical_items > 1
                             && let Some(progress) = &fetch_progress
                         {
-                            for _ in 1..item.logical_items {
-                                progress.add_bytes(item.size).await?;
-                            }
+                            progress
+                                .add_bytes(
+                                    item.size
+                                        * u64::from(item.logical_items - 1),
+                                )
+                                .await?;
                         }
                     }
                     if should_fetch_legacy {
@@ -2076,23 +2033,15 @@ pub async fn download_assets(
                     }
 
                     if let Some(loading_bar) = loading_bar {
-                        for _ in 0..item.logical_items {
-                            emit_loading(loading_bar, per_file_fraction, None)?;
-                        }
+                        let increment =
+                            per_file_fraction * f64::from(item.logical_items);
+                        emit_loading(loading_bar, increment, None)?;
                     }
                     tracing::trace!("Loaded asset with hash {hash}");
                     Ok::<_, crate::Error>(())
                 }
             })
             .await?;
-    }
-
-    // Account for assets that were already on disk so the loading bar still
-    // reaches its total.
-    for _ in 0..skipped_count {
-        if let Some(loading_bar) = loading_bar {
-            emit_loading(loading_bar, per_file_fraction, None)?;
-        }
     }
 
     tracing::debug!("Done loading assets!");
@@ -2803,6 +2752,34 @@ mod tests {
         assert!(!asset_file_is_usable(&truncated, 5));
         assert!(!asset_file_is_usable(&folder, 0));
         assert!(!asset_file_is_usable(&directory.path().join("missing"), 5));
+    }
+
+    #[test]
+    fn asset_repair_only_requests_legacy_copies_for_legacy_versions() {
+        let directory = tempfile::tempdir().unwrap();
+        let root = directory.path();
+        let asset = root.join("lang").join("en_us.json");
+        std::fs::create_dir(root.join("lang")).unwrap();
+
+        assert_eq!(
+            pending_legacy_asset(None, "lang/en_us.json", 5, true),
+            None
+        );
+        assert_eq!(
+            pending_legacy_asset(Some(root), "lang/en_us.json", 5, false),
+            Some(asset.clone())
+        );
+
+        std::fs::write(&asset, b"asset").unwrap();
+
+        assert_eq!(
+            pending_legacy_asset(Some(root), "lang/en_us.json", 5, false),
+            None
+        );
+        assert_eq!(
+            pending_legacy_asset(Some(root), "lang/en_us.json", 5, true),
+            Some(asset)
+        );
     }
 
     #[tokio::test]
