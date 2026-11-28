@@ -13,7 +13,6 @@ import {
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 
-import gradientTextToolCover from '@/assets/lab/gradient-text-tool-cover.png'
 import modTranslationCover from '@/assets/lab/mod-translation-cover.png'
 import recipeGeneratorToolCover from '@/assets/lab/recipe-generator-tool-cover.png'
 import schematicPreviewToolCover from '@/assets/lab/schematic-preview-cover.png'
@@ -38,7 +37,6 @@ const category = ref<LabCategoryFilter>(getLabCategoryFilter())
 const favoriteFilter = ref<LabFavoriteFilter>(getLabFavoriteFilter())
 const favoriteToolIds = ref<string[]>(getLabFavoriteToolIds())
 const toolCoverImages: Record<string, string> = {
-	'gradient-text': gradientTextToolCover,
 	'recipe-generator': recipeGeneratorToolCover,
 	'schematic-preview': schematicPreviewToolCover,
 	'seed-map': seedMapToolCover,
@@ -71,14 +69,6 @@ const messages = defineMessages({
 	noFavorites: {
 		id: 'app.lab.no-favorites',
 		defaultMessage: 'You have not favorited any tools yet.',
-	},
-	gradientTextTitle: {
-		id: 'app.lab.gradient-text.title',
-		defaultMessage: 'Gradient text generator',
-	},
-	gradientTextDescription: {
-		id: 'app.lab.gradient-text.description',
-		defaultMessage: 'Create Minecraft-ready gradient text without a browser.',
 	},
 	recipeGeneratorTitle: {
 		id: 'app.lab.recipe-generator.title',
@@ -167,7 +157,6 @@ const emptyHeading = computed(() => {
 
 function toolTitle(toolId: string, fallback: string) {
 	if (toolId === 'skin-editor') return formatMessage(messages.skinEditorTitle)
-	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextTitle)
 	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorTitle)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapTitle)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewTitle)
@@ -177,7 +166,6 @@ function toolTitle(toolId: string, fallback: string) {
 
 function toolDescription(toolId: string, fallback: string) {
 	if (toolId === 'skin-editor') return formatMessage(messages.skinEditorDescription)
-	if (toolId === 'gradient-text') return formatMessage(messages.gradientTextDescription)
 	if (toolId === 'recipe-generator') return formatMessage(messages.recipeGeneratorDescription)
 	if (toolId === 'seed-map') return formatMessage(messages.seedMapDescription)
 	if (toolId === 'schematic-preview') return formatMessage(messages.schematicPreviewDescription)
@@ -186,7 +174,7 @@ function toolDescription(toolId: string, fallback: string) {
 }
 
 function toolOnboardingId(toolId: string) {
-	return ['gradient-text', 'recipe-generator', 'seed-map', 'schematic-preview'].includes(toolId)
+	return ['recipe-generator', 'seed-map', 'schematic-preview'].includes(toolId)
 		? `lab-${toolId}-card`
 		: undefined
 }

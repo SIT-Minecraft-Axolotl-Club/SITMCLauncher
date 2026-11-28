@@ -3515,177 +3515,6 @@
   "app.lab.favorite.remove": {
     "message": "取消收藏"
   },
-  "app.lab.gradient-text.adapter.bbcode": {
-    "message": "BBCode"
-  },
-  "app.lab.gradient-text.adapter.chat-colors": {
-    "message": "聊天颜色"
-  },
-  "app.lab.gradient-text.adapter.cmi": {
-    "message": "CMI"
-  },
-  "app.lab.gradient-text.adapter.csv": {
-    "message": "CSV"
-  },
-  "app.lab.gradient-text.adapter.html": {
-    "message": "HTML"
-  },
-  "app.lab.gradient-text.adapter.json": {
-    "message": "JSON 文本组件"
-  },
-  "app.lab.gradient-text.adapter.minedown": {
-    "message": "MineDown"
-  },
-  "app.lab.gradient-text.adapter.minimessage": {
-    "message": "MiniMessage"
-  },
-  "app.lab.gradient-text.adapter.minimessage-gradient": {
-    "message": "MiniMessage 渐变"
-  },
-  "app.lab.gradient-text.adapter.motd": {
-    "message": "服务器 MOTD"
-  },
-  "app.lab.gradient-text.adapter.rosegarden-gradient": {
-    "message": "RoseGarden 渐变"
-  },
-  "app.lab.gradient-text.adapter.snbt": {
-    "message": "字符串化 NBT"
-  },
-  "app.lab.gradient-text.adapter.standard": {
-    "message": "标准 HEX"
-  },
-  "app.lab.gradient-text.adapter.taboolib": {
-    "message": "TabooLib"
-  },
-  "app.lab.gradient-text.adapter.taboolib-gradient": {
-    "message": "TabooLib 渐变"
-  },
-  "app.lab.gradient-text.adapter.terraria": {
-    "message": "泰拉瑞亚"
-  },
-  "app.lab.gradient-text.adapter.trchat": {
-    "message": "TrChat"
-  },
-  "app.lab.gradient-text.adapter.vanilla": {
-    "message": "原版"
-  },
-  "app.lab.gradient-text.adapter.vanilla-compatible": {
-    "message": "原版兼容"
-  },
-  "app.lab.gradient-text.colors.add": {
-    "message": "添加颜色"
-  },
-  "app.lab.gradient-text.colors.import": {
-    "message": "导入颜色"
-  },
-  "app.lab.gradient-text.colors.import-placeholder": {
-    "message": "粘贴 HEX、RGB 或 CSS 渐变"
-  },
-  "app.lab.gradient-text.colors.invalid": {
-    "message": "请至少输入一个有效颜色。"
-  },
-  "app.lab.gradient-text.colors.move-down": {
-    "message": "下移颜色"
-  },
-  "app.lab.gradient-text.colors.move-up": {
-    "message": "上移颜色"
-  },
-  "app.lab.gradient-text.colors.randomize": {
-    "message": "随机生成颜色"
-  },
-  "app.lab.gradient-text.colors.remove": {
-    "message": "删除颜色"
-  },
-  "app.lab.gradient-text.colors.stops": {
-    "message": "{count} 个颜色停靠点"
-  },
-  "app.lab.gradient-text.colors.title": {
-    "message": "颜色"
-  },
-  "app.lab.gradient-text.description": {
-    "message": "无需浏览器即可创建适用于 Minecraft 的渐变文字。"
-  },
-  "app.lab.gradient-text.format.bold": {
-    "message": "粗体"
-  },
-  "app.lab.gradient-text.format.italic": {
-    "message": "斜体"
-  },
-  "app.lab.gradient-text.format.obfuscated": {
-    "message": "混淆"
-  },
-  "app.lab.gradient-text.format.simplify": {
-    "message": "简化渐变标签"
-  },
-  "app.lab.gradient-text.format.strikethrough": {
-    "message": "删除线"
-  },
-  "app.lab.gradient-text.format.title": {
-    "message": "输出格式"
-  },
-  "app.lab.gradient-text.format.underlined": {
-    "message": "下划线"
-  },
-  "app.lab.gradient-text.format.vanilla-character": {
-    "message": "颜色控制符"
-  },
-  "app.lab.gradient-text.input.placeholder": {
-    "message": "在此输入 Minecraft 文本"
-  },
-  "app.lab.gradient-text.input.title": {
-    "message": "文本"
-  },
-  "app.lab.gradient-text.output.copied": {
-    "message": "已复制输出"
-  },
-  "app.lab.gradient-text.output.copy": {
-    "message": "复制输出"
-  },
-  "app.lab.gradient-text.output.export": {
-    "message": "导出输出"
-  },
-  "app.lab.gradient-text.output.title": {
-    "message": "输出"
-  },
-  "app.lab.gradient-text.presets.apply": {
-    "message": "应用预设"
-  },
-  "app.lab.gradient-text.presets.count": {
-    "message": "已保存 {count} 个"
-  },
-  "app.lab.gradient-text.presets.delete": {
-    "message": "删除预设"
-  },
-  "app.lab.gradient-text.presets.export": {
-    "message": "导出预设"
-  },
-  "app.lab.gradient-text.presets.import": {
-    "message": "导入预设"
-  },
-  "app.lab.gradient-text.presets.imported": {
-    "message": "已导入 {count} 个预设"
-  },
-  "app.lab.gradient-text.presets.invalid-file": {
-    "message": "该文件不包含有效预设。"
-  },
-  "app.lab.gradient-text.presets.name": {
-    "message": "预设名称"
-  },
-  "app.lab.gradient-text.presets.save": {
-    "message": "保存预设"
-  },
-  "app.lab.gradient-text.presets.template": {
-    "message": "下载模板"
-  },
-  "app.lab.gradient-text.presets.title": {
-    "message": "预设"
-  },
-  "app.lab.gradient-text.preview.title": {
-    "message": "预览"
-  },
-  "app.lab.gradient-text.title": {
-    "message": "渐变文字生成器"
-  },
   "app.lab.mod-translation.active-count": {
     "message": "{count} 个任务进行中"
   },
@@ -5465,6 +5294,12 @@
   "app.minecraft-crash.diagnosis.out-of-memory.title": {
     "message": "可能的问题：Minecraft 内存不足"
   },
+  "app.minecraft-crash.diagnosis.shutdown-watchdog.action": {
+    "message": "游戏关闭后，Java 进程仍在运行。若再次遇到，请保留崩溃报告，便于排查未能退出的模组或后台线程。"
+  },
+  "app.minecraft-crash.diagnosis.shutdown-watchdog.title": {
+    "message": "Minecraft 关闭超时"
+  },
   "app.minecraft-crash.evidence": {
     "message": "参考证据：{evidence}"
   },
@@ -5948,9 +5783,6 @@
   "app.onboarding.action.finish-area": {
     "message": "点击任意位置，收工"
   },
-  "app.onboarding.action.open-gradient-text": {
-    "message": "打开渐变文字生成器，继续"
-  },
   "app.onboarding.action.open-recipe-generator": {
     "message": "打开配方生成器，继续"
   },
@@ -6106,12 +5938,6 @@
   },
   "app.onboarding.lab-seed-map.title": {
     "message": "加载世界前先找到它"
-  },
-  "app.onboarding.lab-tools.description": {
-    "message": "生成带格式的文字、探索 Java 世界，并直接在启动器中检查投影建筑。"
-  },
-  "app.onboarding.lab-tools.title": {
-    "message": "Minecraft 本地工具"
   },
   "app.onboarding.lab.description": {
     "message": "实验室将本地 Minecraft 工具放进启动器，无需打开其他网站或注册额外账号。"

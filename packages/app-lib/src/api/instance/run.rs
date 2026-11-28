@@ -81,6 +81,8 @@ async fn run_with_extra_launch_args_inner(
     gc_intent: Option<GcLaunchIntent>,
 ) -> crate::Result<(ProcessMetadata, Option<GcLaunchReport>)> {
     let state = State::get().await?;
+    let _launch_guard =
+        state.process_manager.begin_instance_launch(instance_id)?;
     let launch_preparation_timeout =
         crate::state::instances::commands::get_instance_launch_context(
             instance_id,

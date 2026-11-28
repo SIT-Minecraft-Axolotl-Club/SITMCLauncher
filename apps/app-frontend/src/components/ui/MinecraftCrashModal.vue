@@ -268,6 +268,15 @@ const messages = defineMessages({
 		defaultMessage:
 			'Free space on the drive containing this instance, then launch Minecraft again.',
 	},
+	shutdownWatchdogTitle: {
+		id: 'app.minecraft-crash.diagnosis.shutdown-watchdog.title',
+		defaultMessage: 'Minecraft timed out while closing',
+	},
+	shutdownWatchdogAction: {
+		id: 'app.minecraft-crash.diagnosis.shutdown-watchdog.action',
+		defaultMessage:
+			'Minecraft reported that Java was still running after the game closed. Keep the crash report if this happens again. It can help identify a mod or background thread that failed to stop.',
+	},
 	fileInUseTitle: {
 		id: 'app.minecraft-crash.diagnosis.file-in-use.title',
 		defaultMessage: 'Possible issue: another process is using a required file',
@@ -374,6 +383,7 @@ const messages = defineMessages({
 })
 
 const diagnosisMessages = {
+	client_shutdown_watchdog: [messages.shutdownWatchdogTitle, messages.shutdownWatchdogAction],
 	jvm_arguments: [messages.jvmArgumentsTitle, messages.jvmArgumentsAction],
 	java_too_new: [messages.javaTooNewTitle, messages.javaTooNewAction],
 	java_incompatible: [messages.javaIncompatibleTitle, messages.javaIncompatibleAction],
@@ -452,6 +462,7 @@ function show(modalPayload: CrashModalPayload, isPreview = false): boolean {
 	aiStatus.value = ''
 	aiQueued.value = false
 	modal.value?.show()
+	void refreshAIAvailability()
 	return true
 }
 
@@ -917,7 +928,6 @@ async function handleProcessEvent(event: ProcessEvent): Promise<void> {
 
 onMounted(async () => {
 	mounted = true
-	void refreshAIAvailability()
 	const unlisten = await process_listener((event: ProcessEvent) => void handleProcessEvent(event))
 	if (!mounted) {
 		unlisten()

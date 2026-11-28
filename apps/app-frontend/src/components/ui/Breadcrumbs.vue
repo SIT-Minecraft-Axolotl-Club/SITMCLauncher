@@ -124,10 +124,6 @@ const messages = defineMessages({
 	library: { id: 'app.navigation.library', defaultMessage: 'Library' },
 	downloads: { id: 'app.navigation.downloads', defaultMessage: 'Downloads' },
 	lab: { id: 'app.navigation.lab', defaultMessage: 'Lab' },
-	gradientText: {
-		id: 'app.lab.gradient-text.title',
-		defaultMessage: 'Gradient text generator',
-	},
 	seedMap: { id: 'app.lab.seed-map.title', defaultMessage: 'Seed map' },
 	schematicWorkshop: {
 		id: 'app.lab.schematic-preview.title',
@@ -157,7 +153,6 @@ const staticLabels = {
 	Downloads: messages.downloads,
 	Settings: commonMessages.settingsLabel,
 	Lab: messages.lab,
-	'Gradient text generator': messages.gradientText,
 	'Seed map': messages.seedMap,
 	'Schematic workshop': messages.schematicWorkshop,
 	'Mod translation': messages.modTranslation,
@@ -180,7 +175,6 @@ const staticIcons: Record<string, Component> = {
 	Downloads: DownloadIcon,
 	Settings: SettingsIcon,
 	Lab: FlaskConicalIcon,
-	'Gradient text generator': FlaskConicalIcon,
 	'Seed map': MapIcon,
 	'Schematic workshop': CodeIcon,
 	'Mod translation': CodeIcon,

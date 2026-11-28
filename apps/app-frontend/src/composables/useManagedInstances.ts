@@ -57,7 +57,7 @@ const downloadsAllowed = ref(false)
 const failedAt = new Map<string, number>()
 const RETRY_COOLDOWN_MS = 15 * 60 * 1000
 
-let inFlight: Promise<void> | null = null
+let inFlight: Promise<void | string | null> | null = null
 let syncedThisSession = false
 
 const isBusy = computed(() => state.value === 'syncing' || state.value === 'updating')
@@ -251,17 +251,17 @@ async function syncNow(force = false): Promise<void> {
 	}
 
 	const run = runSync(force)
+		.catch(async (syncError) => {
+			error.value = describeFailure(syncError)
+			state.value = 'error'
+			await refreshRecords().catch(() => {})
+		})
+		.finally(() => {
+			updatingName.value = null
+			inFlight = null
+		})
 	inFlight = run
-	try {
-		await run
-	} catch (syncError) {
-		error.value = syncError instanceof Error ? syncError.message : String(syncError)
-		state.value = 'error'
-		await refreshRecords().catch(() => {})
-	} finally {
-		updatingName.value = null
-		inFlight = null
-	}
+	await run
 }
 
 /**
@@ -310,20 +310,44 @@ async function refresh(): Promise<void> {
  * its button calls. The records are re-read afterwards because installing binds
  * a new local instance to the society instance.
  */
-async function installOptional(action: ManagedInstanceAction): Promise<void> {
+async function installOptional(serverInstanceId: string): Promise<string | null> {
+	while (inFlight) {
+		await inFlight
+	}
+
+	const action = optionalActionsByServerId.value.get(serverInstanceId)
+	if (!action) {
+		const record = activeRecords.value.find(
+			(record) => record.server_instance_id === serverInstanceId,
+		)
+		return record?.instance_id || null
+	}
+
+	const install = runOptionalInstall(action).finally(() => {
+		updatingName.value = null
+		inFlight = null
+	})
+	inFlight = install
+	return await install
+}
+
+async function runOptionalInstall(action: ManagedInstanceAction): Promise<string | null> {
 	state.value = 'updating'
 	updatingName.value = action.spec.name
 	error.value = null
 
 	try {
-		await applyManagedInstanceAction(action)
+		const instanceId = await applyManagedInstanceAction(action)
+		action.instance_id = instanceId
+		action.applied_revision = action.spec.revision
+		action.action = 'current'
 		await refreshRecords()
 		state.value = 'ready'
+		return instanceId
 	} catch (installError) {
-		error.value = installError instanceof Error ? installError.message : String(installError)
+		error.value = describeFailure(installError)
 		state.value = 'error'
-	} finally {
-		updatingName.value = null
+		return null
 	}
 }
 

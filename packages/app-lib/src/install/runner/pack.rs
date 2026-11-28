@@ -16,22 +16,6 @@ pub(super) async fn install_pack(
         )
         .await?;
 
-    // A pack the launcher was only given a URL for is fetched here, through the
-    // shared downloader: an archive of hundreds of megabytes gets progress
-    // reporting, several connections, a resumed partial file and retries
-    // instead of one bare request that has to succeed in one go. A file the
-    // caller already holds is only checked for integrity.
-    let remote_pack = match &location {
-        CreatePackLocation::FromFile {
-            path: None, url, ..
-        } => url.clone().filter(|url| !url.trim().is_empty()),
-        _ => None,
-    };
-    let resolved_pack = match &remote_pack {
-        Some(_) => Some(location.resolve_pack_path(reporter.clone()).await?),
-        None => None,
-    };
-
     let create_pack = match &location {
         CreatePackLocation::FromVersionId {
             project_id,
@@ -58,27 +42,16 @@ pub(super) async fn install_pack(
             )
             .await?
         }
-        CreatePackLocation::FromFile { path, .. } => {
-            let path = match resolved_pack {
-                Some(path) => path,
-                None => path.clone().ok_or_else(|| {
-                    crate::ErrorKind::InputError(
-                        "The pack location names neither a file nor a URL"
-                            .to_string(),
-                    )
-                    .as_error()
-                })?,
-            };
-            let context = match &remote_pack {
-                Some(url) => InstallErrorContext::new("download modpack file")
-                    .urls(vec![url.clone()])
+        CreatePackLocation::FromFile { path, url, .. } => {
+            let context = if let Some(path) = path {
+                InstallErrorContext::new("read local modpack file")
                     .source_path(path.display().to_string())
-                    .build(),
-                None => InstallErrorContext::new("read local modpack file")
-                    .source_path(path.display().to_string())
-                    .build(),
+            } else {
+                InstallErrorContext::new("download modpack file")
+                    .urls(url.iter().cloned().collect())
             };
-            reporter.set_context(context).await?;
+            reporter.set_context(context.build()).await?;
+            let path = location.resolve_pack_path(reporter.clone()).await?;
             match detect_and_install_local_pack(
                 path,
                 instance_id.clone(),

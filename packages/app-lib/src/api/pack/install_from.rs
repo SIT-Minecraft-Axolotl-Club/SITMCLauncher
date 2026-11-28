@@ -25,6 +25,7 @@ use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::pin::Pin;
 
+use uuid::Uuid;
 use zip::ZipArchive;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq)]
@@ -152,7 +153,8 @@ const DOWNLOADED_PACK_CACHE_FOLDER: &str = "modpacks";
 /// The icon is decoration and the pack download is what the player is waiting
 /// for, so a host that answers slowly is given up on rather than holding the
 /// install back.
-const ICON_DOWNLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(8);
+const ICON_DOWNLOAD_TIMEOUT: std::time::Duration =
+    std::time::Duration::from_secs(8);
 
 impl CreatePackLocation {
     /// Local file the pack lives in, downloading it first when the caller only
@@ -181,40 +183,46 @@ impl CreatePackLocation {
             .as_error());
         };
 
-        let remote =
-            url.as_deref().map(str::trim).filter(|url| !url.is_empty());
+        let sha1 = pack_sha1(sha1.as_deref())?;
+        if let Some(path) = path {
+            if sha1.is_some() || size.is_some() {
+                verify_pack_file(path, sha1, *size).await?;
+            }
+            return Ok(path.clone());
+        }
 
-        let file = match (path.clone(), remote) {
-            (Some(file), _) => file,
-            (None, Some(_)) => downloaded_pack_path(sha1.as_deref()).await?,
-            (None, None) => {
-                return Err(crate::ErrorKind::InputError(
+        let url = url
+            .as_deref()
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .ok_or_else(|| {
+                crate::ErrorKind::InputError(
                     "The pack location names neither a file nor a URL"
                         .to_string(),
                 )
-                .as_error());
-            }
-        };
-
-        match remote {
-            Some(url) => {
-                download_pack_with_progress(
-                    url,
-                    sha1.as_deref(),
-                    *size,
-                    &file,
-                    reporter,
-                )
-                .await?;
-            }
-            // A file the caller already holds. A declared SHA-1 or size is
-            // still enforced: it is the only thing standing between a truncated
-            // file that came off the network earlier and the archive reader.
-            None => verify_pack_file(&file, sha1.as_deref(), *size).await?,
-        }
-
+            })?;
+        let state = State::get().await?;
+        let file = state
+            .directories
+            .caches_dir()
+            .join(DOWNLOADED_PACK_CACHE_FOLDER)
+            .join(downloaded_pack_filename(sha1, reporter.job_id()));
+        download_pack_with_progress(url, sha1, *size, &file, reporter).await?;
         Ok(file)
     }
+}
+
+fn pack_sha1(sha1: Option<&str>) -> crate::Result<Option<&str>> {
+    let sha1 = sha1.map(str::trim).filter(|hash| !hash.is_empty());
+    if sha1.is_some_and(|hash| {
+        hash.len() != 40 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }) {
+        return Err(crate::ErrorKind::InputError(
+            "Modpack SHA-1 must be a 40-character hexadecimal hash".to_string(),
+        )
+        .into());
+    }
+    Ok(sha1)
 }
 
 /// Enforces the declared SHA-1 and size of a pack that is already on disk.
@@ -229,6 +237,13 @@ async fn verify_pack_file(
             path.display()
         ))
     })?;
+    if !metadata.is_file() {
+        return Err(crate::ErrorKind::InputError(format!(
+            "Modpack file {} is not a regular file",
+            path.display()
+        ))
+        .into());
+    }
     if let Some(expected) = size
         && metadata.len() != expected
     {
@@ -239,8 +254,7 @@ async fn verify_pack_file(
         ))
         .as_error());
     }
-    if let Some(expected) = sha1.map(str::trim).filter(|sha1| !sha1.is_empty())
-    {
+    if let Some(expected) = sha1 {
         let (_, actual) = sha1_file_async(path).await?;
         if !actual.eq_ignore_ascii_case(expected) {
             return Err(crate::ErrorKind::HashError(
@@ -255,21 +269,14 @@ async fn verify_pack_file(
 
 /// Where a downloaded pack is cached.
 ///
-/// The cache entry is keyed by the pack's own SHA-1, so the same revision of the
-/// same pack always resolves to the same file across runs: a finished download
-/// is reused, and an interrupted one resumes where it stopped.
-async fn downloaded_pack_path(sha1: Option<&str>) -> crate::Result<PathBuf> {
-    let key = sha1
-        .map(|sha1| sha1.trim().to_ascii_lowercase())
-        .filter(|sha1| sha1.len() >= 16)
-        .map(|sha1| sha1[..16].to_string())
-        .unwrap_or_else(|| "unverified".to_string());
-    let state = State::get().await?;
-    Ok(state
-        .directories
-        .caches_dir()
-        .join(DOWNLOADED_PACK_CACHE_FOLDER)
-        .join(format!("{key}.mrpack")))
+/// Verified archives keep their existing cache names so downloads can resume
+/// after an upgraded launcher restarts. Without a checksum, the archive
+/// belongs to the job that downloaded it, including retries of that same job.
+fn downloaded_pack_filename(sha1: Option<&str>, job_id: Uuid) -> String {
+    match sha1 {
+        Some(hash) => format!("{}.mrpack", hash[..16].to_ascii_lowercase()),
+        None => format!("job-{job_id}.mrpack"),
+    }
 }
 
 /// Downloads a pack while reporting progress into the install job that asked for
@@ -498,10 +505,15 @@ fn read_local_mrpack_identity(path: &Path) -> Option<LocalMrpackIdentity> {
     })?;
 
     let mut contents = String::new();
-    archive.by_index(index).ok()?.read_to_string(&mut contents).ok()?;
+    archive
+        .by_index(index)
+        .ok()?
+        .read_to_string(&mut contents)
+        .ok()?;
     let pack: PackFormat = serde_json::from_str(&contents).ok()?;
 
-    let game_version = pack.dependencies.get(&PackDependency::Minecraft)?.clone();
+    let game_version =
+        pack.dependencies.get(&PackDependency::Minecraft)?.clone();
     let (loader, loader_version) = PRIMARY_LOADERS
         .iter()
         .find_map(|(dependency, loader)| {
@@ -1195,4 +1207,92 @@ async fn resolve_pack_loader_version(
         ))
         .into()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::install::{InstallRequest, model::InstallJobState};
+
+    #[test]
+    fn unverified_archives_are_isolated_by_install_job() {
+        let first = Uuid::new_v4();
+        let second = Uuid::new_v4();
+        assert_ne!(
+            downloaded_pack_filename(None, first),
+            downloaded_pack_filename(None, second)
+        );
+        assert_eq!(
+            downloaded_pack_filename(None, first),
+            format!("job-{first}.mrpack")
+        );
+
+        let sha1 =
+            pack_sha1(Some(" A123456789ABCDEF0123456789ABCDEF01234567 "))
+                .unwrap();
+        assert_eq!(
+            downloaded_pack_filename(sha1, first),
+            "a123456789abcdef.mrpack"
+        );
+        assert_eq!(
+            downloaded_pack_filename(sha1, first),
+            downloaded_pack_filename(sha1, second)
+        );
+    }
+
+    #[test]
+    fn malformed_pack_hashes_are_rejected_before_building_a_path() {
+        assert_eq!(pack_sha1(Some(" ")).unwrap(), None);
+        assert!(pack_sha1(Some("short")).is_err());
+        assert!(pack_sha1(Some("界界界界界界界界界界界aabcdef")).is_err());
+        assert!(
+            pack_sha1(Some("a123456789abcdef0123456789abcdef01234/67"))
+                .is_err()
+        );
+    }
+
+    #[tokio::test]
+    async fn file_backed_install_checks_declared_hash_and_size() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("pack.mrpack");
+        let data = b"expected archive contents";
+        tokio::fs::write(&path, data).await.unwrap();
+        let sha1 = sha1_smol::Sha1::from(data).hexdigest();
+        let location = CreatePackLocation::FromFile {
+            path: Some(path.clone()),
+            url: Some("https://example.invalid/pack.mrpack".to_string()),
+            sha1: Some(sha1),
+            size: Some(data.len() as u64),
+            display: None,
+        };
+        let reporter = InstallProgressReporter::new(
+            Uuid::new_v4(),
+            InstallJobState::new(InstallRequest::CreateModpackInstance {
+                location: location.clone(),
+                post_install_edit: None,
+            }),
+        );
+        assert_eq!(
+            location.resolve_pack_path(reporter.clone()).await.unwrap(),
+            path
+        );
+        tokio::fs::write(&path, vec![b'x'; data.len()])
+            .await
+            .unwrap();
+        let error = location
+            .resolve_pack_path(reporter.clone())
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            error.raw.as_ref(),
+            crate::ErrorKind::HashError(..)
+        ));
+
+        tokio::fs::write(&path, b"truncated").await.unwrap();
+        let error = location.resolve_pack_path(reporter).await.unwrap_err();
+        assert!(matches!(
+            error.raw.as_ref(),
+            crate::ErrorKind::InputError(_)
+        ));
+    }
 }

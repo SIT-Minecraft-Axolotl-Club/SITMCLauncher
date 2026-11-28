@@ -3392,177 +3392,6 @@
   "app.lab.favorite.remove": {
     "message": "Remove from favorites"
   },
-  "app.lab.gradient-text.adapter.bbcode": {
-    "message": "BBCode"
-  },
-  "app.lab.gradient-text.adapter.chat-colors": {
-    "message": "Chat Colors"
-  },
-  "app.lab.gradient-text.adapter.cmi": {
-    "message": "CMI"
-  },
-  "app.lab.gradient-text.adapter.csv": {
-    "message": "CSV"
-  },
-  "app.lab.gradient-text.adapter.html": {
-    "message": "HTML"
-  },
-  "app.lab.gradient-text.adapter.json": {
-    "message": "JSON text component"
-  },
-  "app.lab.gradient-text.adapter.minedown": {
-    "message": "MineDown"
-  },
-  "app.lab.gradient-text.adapter.minimessage": {
-    "message": "MiniMessage"
-  },
-  "app.lab.gradient-text.adapter.minimessage-gradient": {
-    "message": "MiniMessage gradient"
-  },
-  "app.lab.gradient-text.adapter.motd": {
-    "message": "MOTD"
-  },
-  "app.lab.gradient-text.adapter.rosegarden-gradient": {
-    "message": "RoseGarden gradient"
-  },
-  "app.lab.gradient-text.adapter.snbt": {
-    "message": "Stringified NBT"
-  },
-  "app.lab.gradient-text.adapter.standard": {
-    "message": "Standard HEX"
-  },
-  "app.lab.gradient-text.adapter.taboolib": {
-    "message": "TabooLib"
-  },
-  "app.lab.gradient-text.adapter.taboolib-gradient": {
-    "message": "TabooLib gradient"
-  },
-  "app.lab.gradient-text.adapter.terraria": {
-    "message": "Terraria"
-  },
-  "app.lab.gradient-text.adapter.trchat": {
-    "message": "TrChat"
-  },
-  "app.lab.gradient-text.adapter.vanilla": {
-    "message": "Vanilla"
-  },
-  "app.lab.gradient-text.adapter.vanilla-compatible": {
-    "message": "Vanilla compatible"
-  },
-  "app.lab.gradient-text.colors.add": {
-    "message": "Add color"
-  },
-  "app.lab.gradient-text.colors.import": {
-    "message": "Import colors"
-  },
-  "app.lab.gradient-text.colors.import-placeholder": {
-    "message": "Paste HEX, RGB, or a CSS gradient"
-  },
-  "app.lab.gradient-text.colors.invalid": {
-    "message": "Use at least one valid color."
-  },
-  "app.lab.gradient-text.colors.move-down": {
-    "message": "Move color down"
-  },
-  "app.lab.gradient-text.colors.move-up": {
-    "message": "Move color up"
-  },
-  "app.lab.gradient-text.colors.randomize": {
-    "message": "Randomize colors"
-  },
-  "app.lab.gradient-text.colors.remove": {
-    "message": "Remove color"
-  },
-  "app.lab.gradient-text.colors.stops": {
-    "message": "{count} color stops"
-  },
-  "app.lab.gradient-text.colors.title": {
-    "message": "Colors"
-  },
-  "app.lab.gradient-text.description": {
-    "message": "Create Minecraft-ready gradient text without a browser."
-  },
-  "app.lab.gradient-text.format.bold": {
-    "message": "Bold"
-  },
-  "app.lab.gradient-text.format.italic": {
-    "message": "Italic"
-  },
-  "app.lab.gradient-text.format.obfuscated": {
-    "message": "Obfuscated"
-  },
-  "app.lab.gradient-text.format.simplify": {
-    "message": "Simplify gradient tags"
-  },
-  "app.lab.gradient-text.format.strikethrough": {
-    "message": "Strikethrough"
-  },
-  "app.lab.gradient-text.format.title": {
-    "message": "Output format"
-  },
-  "app.lab.gradient-text.format.underlined": {
-    "message": "Underline"
-  },
-  "app.lab.gradient-text.format.vanilla-character": {
-    "message": "Color character"
-  },
-  "app.lab.gradient-text.input.placeholder": {
-    "message": "Type your Minecraft text here"
-  },
-  "app.lab.gradient-text.input.title": {
-    "message": "Text"
-  },
-  "app.lab.gradient-text.output.copied": {
-    "message": "Output copied"
-  },
-  "app.lab.gradient-text.output.copy": {
-    "message": "Copy output"
-  },
-  "app.lab.gradient-text.output.export": {
-    "message": "Export output"
-  },
-  "app.lab.gradient-text.output.title": {
-    "message": "Output"
-  },
-  "app.lab.gradient-text.presets.apply": {
-    "message": "Apply preset"
-  },
-  "app.lab.gradient-text.presets.count": {
-    "message": "{count} saved"
-  },
-  "app.lab.gradient-text.presets.delete": {
-    "message": "Delete preset"
-  },
-  "app.lab.gradient-text.presets.export": {
-    "message": "Export presets"
-  },
-  "app.lab.gradient-text.presets.import": {
-    "message": "Import presets"
-  },
-  "app.lab.gradient-text.presets.imported": {
-    "message": "Imported {count} presets"
-  },
-  "app.lab.gradient-text.presets.invalid-file": {
-    "message": "This file does not contain valid presets."
-  },
-  "app.lab.gradient-text.presets.name": {
-    "message": "Preset name"
-  },
-  "app.lab.gradient-text.presets.save": {
-    "message": "Save preset"
-  },
-  "app.lab.gradient-text.presets.template": {
-    "message": "Download template"
-  },
-  "app.lab.gradient-text.presets.title": {
-    "message": "Presets"
-  },
-  "app.lab.gradient-text.preview.title": {
-    "message": "Preview"
-  },
-  "app.lab.gradient-text.title": {
-    "message": "Gradient text generator"
-  },
   "app.lab.mod-translation.active-count": {
     "message": "{count} running"
   },
@@ -5486,6 +5315,12 @@
   "app.minecraft-crash.diagnosis.out-of-memory.title": {
     "message": "Possible issue: Minecraft ran out of memory"
   },
+  "app.minecraft-crash.diagnosis.shutdown-watchdog.action": {
+    "message": "Minecraft reported that Java was still running after the game closed. Keep the crash report if this happens again. It can help identify a mod or background thread that failed to stop."
+  },
+  "app.minecraft-crash.diagnosis.shutdown-watchdog.title": {
+    "message": "Minecraft timed out while closing"
+  },
   "app.minecraft-crash.evidence": {
     "message": "Reference evidence: {evidence}"
   },
@@ -5981,9 +5816,6 @@
   "app.onboarding.action.finish-area": {
     "message": "Click anywhere and you are all set"
   },
-  "app.onboarding.action.open-gradient-text": {
-    "message": "Open Gradient text generator to continue"
-  },
   "app.onboarding.action.open-recipe-generator": {
     "message": "Open Recipe generator to continue"
   },
@@ -6139,12 +5971,6 @@
   },
   "app.onboarding.lab-seed-map.title": {
     "message": "Find a world before you load it"
-  },
-  "app.onboarding.lab-tools.description": {
-    "message": "Create formatted text and recipe data packs, explore Java worlds, and inspect schematic builds without leaving the launcher."
-  },
-  "app.onboarding.lab-tools.title": {
-    "message": "Local tools for Minecraft"
   },
   "app.onboarding.lab.description": {
     "message": "The Lab keeps local Minecraft tools inside the launcher, without another website or account."

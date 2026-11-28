@@ -708,12 +708,16 @@ onMounted(async () => {
 	document.querySelector('body').addEventListener('auxclick', handleAuxClick)
 	window.addEventListener(DIRECT_LINKS_SYNCED_EVENT, handleDirectLinkSyncReport)
 
-	// Background maintenance must not compete with first paint / route enter.
-	runWhenIdle(() => {
-		void checkUpdates()
-		void warnIfRunningElevated()
-		startDirectLinkSync()
-	})
+	// The background checks read launcher settings after initialization.
+	void stateInitialization
+		.then(() => {
+			runWhenIdle(() => {
+				void checkUpdates()
+				void warnIfRunningElevated()
+				startDirectLinkSync()
+			})
+		})
+		.catch(() => {})
 })
 
 let directLinkSync: (() => Promise<void>) | undefined
